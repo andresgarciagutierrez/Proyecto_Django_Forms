@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* 1. Configuración de Tema para Tailwind v4 */
+@theme {
+  --color-health-primary: #0284c7;
+  --color-health-dark: #0369a1;
+  --color-health-light: #f0f9ff;
+  --color-health-accent: #0d9488;
+  --color-health-border: #e2e8f0;
+}
+
+/* 2. Variables CSS globales */
+:root {
+  --health-primary: #0284c7;
+  --health-primary-dark: #0369a1;
+  --health-bg: #f8fafc;
+  --health-text-main: #0f172a;
+}
+
+/* Base global */
+body {
+  background-color: var(--health-bg);
+  color: var(--health-text-main);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 3. Estilos Reutilizables */
+@layer components {
+  .btn-health-primary {
+    @apply inline-flex items-center justify-center font-semibold text-white bg-sky-600 hover:bg-sky-700 px-4 py-2.5 rounded-xl shadow-xs transition-all text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2;
+  }
+
+  .health-card-interactive {
+    @apply bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs transition-all duration-200 hover:border-sky-300 hover:shadow-md flex items-center justify-between gap-4;
+  }
+
+  .badge-health-action {
+    @apply inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200/60 transition-colors;
+  }
+}
