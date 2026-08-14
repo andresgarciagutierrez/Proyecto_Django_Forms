@@ -1,15 +1,30 @@
-import { createContext, useContext, useState, useEffect } from "react";
-import { loginRequest, getMe } from "../api/auth";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  loginRequest,
+  getMe,
+} from "../api/auth";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(localStorage.getItem("token"));
-  const [username, setUsername] = useState(localStorage.getItem("username"));
+  const [token, setToken] = useState(
+    localStorage.getItem("token")
+  );
+
+  const [username, setUsername] = useState(
+    localStorage.getItem("username")
+  );
+
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Cada vez que cambia el token (login/logout), volvemos a consultar el rol.
+  // Obtener información del usuario
   useEffect(() => {
     if (!token) {
       setRole(null);
@@ -18,33 +33,72 @@ export function AuthProvider({ children }) {
     }
 
     setLoading(true);
+
     getMe()
-      .then((res) => setRole(res.data))
-      .catch(() => setRole(null))
-      .finally(() => setLoading(false));
+      .then(({ data }) => {
+        setRole(data);
+      })
+      .catch(() => {
+        setRole(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [token]);
 
+  // Login
   const login = async (user, password) => {
-    const response = await loginRequest(user, password);
-    localStorage.setItem("token", response.data.token);
-    localStorage.setItem("username", user);
-    setToken(response.data.token);
-    setUsername(user);
+    const usernameValue = user.trim();
+
+    if (!usernameValue || !password) {
+      throw new Error(
+        "Usuario y contraseña son obligatorios."
+      );
+    }
+
+    const response = await loginRequest(
+      usernameValue,
+      password
+    );
+
+    const newToken = response.data?.token;
+
+    if (!newToken) {
+      throw new Error(
+        "El servidor no devolvió un token de autenticación."
+      );
+    }
+
+    localStorage.setItem("token", newToken);
+    localStorage.setItem(
+      "username",
+      usernameValue
+    );
+
+    setToken(newToken);
+    setUsername(usernameValue);
   };
 
+  // Logout
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("username");
+
     setToken(null);
     setUsername(null);
     setRole(null);
   };
 
-  // Mismo criterio en ambos casos: staff/superuser siempre puede;
-  // un Form Creator normal también puede gestionar y ver lo suyo.
-  const canManageForms = Boolean(
-    role?.is_form_creator || role?.is_staff || role?.is_superuser
-  );
+  // Permisos
+  const isStaff = Boolean(role?.is_staff);
+  const isSuperuser = Boolean(role?.is_superuser);
+  const isFormCreator = Boolean(role?.is_form_creator);
+
+  const canManageForms =
+    isStaff ||
+    isSuperuser ||
+    isFormCreator;
+
   const canViewResponses = canManageForms;
 
   return (
@@ -54,8 +108,14 @@ export function AuthProvider({ children }) {
         username,
         role,
         loading,
+
+        isStaff,
+        isSuperuser,
+        isFormCreator,
+
         login,
         logout,
+
         canManageForms,
         canViewResponses,
       }}
@@ -65,4 +125,5 @@ export function AuthProvider({ children }) {
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () =>
+  useContext(AuthContext);

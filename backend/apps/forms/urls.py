@@ -7,37 +7,9 @@ from .views import (
 )
 
 router = DefaultRouter()
-
-
-# =========================================================
-# FORMULARIOS
-# =========================================================
-
-router.register(
-    "forms",
-    FormViewSet,
-    basename="form",
-)
-
-
-# =========================================================
-# RESPUESTAS
-# =========================================================
-
-router.register(
-    "responses",
-    FormResponseViewSet,
-    basename="response",
-)
-
-
-# =========================================================
-# URLS
-# =========================================================
+router.register("forms", FormViewSet, basename="form")
+router.register("responses", FormResponseViewSet, basename="response")
 
 urlpatterns = [
-    path(
-        "",
-        include(router.urls),
-    ),
+    path("", include(router.urls)),
 ]

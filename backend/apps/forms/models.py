@@ -46,7 +46,6 @@ class FormField(models.Model):
     )
 
     is_required = models.BooleanField(default=True)
-
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -71,7 +70,6 @@ class FieldChoice(models.Model):
     )
 
     text = models.CharField(max_length=200)
-
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -106,6 +104,8 @@ class FormResponse(models.Model):
         related_name="responses",
     )
 
+    # Cuenta que envió técnicamente la respuesta.
+    # Puede ser null cuando responde un usuario anónimo.
     respondent = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -114,6 +114,7 @@ class FormResponse(models.Model):
         blank=True,
     )
 
+    # Persona que realmente está diligenciando el formulario.
     respondent_name = models.CharField(max_length=200)
 
     document_type = models.CharField(
@@ -147,20 +148,9 @@ class FormAnswer(models.Model):
         related_name="answers",
     )
 
-    text_value = models.TextField(
-        blank=True,
-        null=True,
-    )
-
-    number_value = models.FloatField(
-        blank=True,
-        null=True,
-    )
-
-    date_value = models.DateField(
-        blank=True,
-        null=True,
-    )
+    text_value = models.TextField(blank=True, null=True)
+    number_value = models.FloatField(blank=True, null=True)
+    date_value = models.DateField(blank=True, null=True)
 
     selected_choices = models.ManyToManyField(
         FieldChoice,

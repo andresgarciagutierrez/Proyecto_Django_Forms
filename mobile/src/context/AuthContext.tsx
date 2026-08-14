@@ -1,10 +1,10 @@
 import {
   createContext,
+  ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useState,
-  useCallback,
-  ReactNode,
 } from "react";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,39 +13,22 @@ import { router } from "expo-router";
 import { loginRequest } from "../api/auth";
 import { setOnUnauthorized } from "../api/client";
 
-/**
- * ============================================================
- * TIPOS
- * ============================================================
- */
-
 type AuthContextType = {
   token: string | null;
   username: string | null;
   loading: boolean;
-
   login: (
     username: string,
     password: string
   ) => Promise<void>;
-
   logout: () => Promise<void>;
 };
-
-/**
- * ============================================================
- * CONTEXT
- * ============================================================
- */
 
 const AuthContext =
   createContext<AuthContextType | null>(null);
 
-/**
- * ============================================================
- * PROVIDER
- * ============================================================
- */
+const TOKEN_KEY = "token";
+const USERNAME_KEY = "username";
 
 export function AuthProvider({
   children,
@@ -61,52 +44,25 @@ export function AuthProvider({
   const [loading, setLoading] =
     useState(true);
 
-  /**
-   * ==========================================================
-   * RESTAURAR SESIÓN
-   * ==========================================================
-   */
-
+  // Restaurar sesión
   useEffect(() => {
     let mounted = true;
 
-    async function restoreSession() {
+    const restoreSession = async () => {
       try {
-        const storedToken =
-          await AsyncStorage.getItem(
-            "token"
-          );
+        const [storedToken, storedUsername] =
+          await Promise.all([
+            AsyncStorage.getItem(TOKEN_KEY),
+            AsyncStorage.getItem(USERNAME_KEY),
+          ]);
 
-        const storedUsername =
-          await AsyncStorage.getItem(
-            "username"
-          );
+        if (!mounted) return;
 
-        if (!mounted) {
-          return;
-        }
-
-        setToken(
-          storedToken || null
-        );
-
-        setUsername(
-          storedUsername || null
-        );
-
-        if (__DEV__) {
-          console.log(
-            "[AUTH] Sesión restaurada:",
-            {
-              hasToken: Boolean(storedToken),
-              username:
-                storedUsername || null,
-            }
-          );
-        }
+        setToken(storedToken);
+        setUsername(storedUsername);
       } catch (error) {
         console.error(
-          "[AUTH] ERROR RESTAURANDO SESIÓN:",
+          "[AUTH] Error restaurando sesión:",
           error
         );
 
@@ -119,7 +75,7 @@ export function AuthProvider({
           setLoading(false);
         }
       }
-    }
+    };
 
     restoreSession();
 
@@ -128,31 +84,27 @@ export function AuthProvider({
     };
   }, []);
 
-  /**
-   * ==========================================================
-   * LOGIN
-   * ==========================================================
-   */
-
+  // Login
   const login = useCallback(
     async (
       usernameValue: string,
       password: string
     ) => {
-      if (__DEV__) {
-        console.log(
-          "[AUTH] Iniciando login para:",
-          usernameValue
+      const usernameTrimmed =
+        usernameValue.trim();
+
+      if (!usernameTrimmed || !password) {
+        throw new Error(
+          "Usuario y contraseña son obligatorios."
         );
       }
 
       const data = await loginRequest(
-        usernameValue,
+        usernameTrimmed,
         password
       );
 
-      const newToken =
-        data?.token;
+      const newToken = data?.token;
 
       if (!newToken) {
         throw new Error(
@@ -160,102 +112,45 @@ export function AuthProvider({
         );
       }
 
-      /**
-       * Guardar token.
-       */
-      await AsyncStorage.setItem(
-        "token",
-        newToken
-      );
+      await Promise.all([
+        AsyncStorage.setItem(
+          TOKEN_KEY,
+          newToken
+        ),
+        AsyncStorage.setItem(
+          USERNAME_KEY,
+          usernameTrimmed
+        ),
+      ]);
 
-      /**
-       * Guardar usuario.
-       */
-      await AsyncStorage.setItem(
-        "username",
-        usernameValue.trim()
-      );
-
-      /**
-       * Actualizar estado.
-       */
       setToken(newToken);
+      setUsername(usernameTrimmed);
+    },
+    []
+  );
 
-      setUsername(
-        usernameValue.trim()
+  // Logout
+  const logout = useCallback(async () => {
+    try {
+      await Promise.all([
+        AsyncStorage.removeItem(TOKEN_KEY),
+        AsyncStorage.removeItem(USERNAME_KEY),
+      ]);
+    } catch (error) {
+      console.error(
+        "[AUTH] Error eliminando sesión:",
+        error
       );
+    } finally {
+      setToken(null);
+      setUsername(null);
+    }
+  }, []);
 
-      if (__DEV__) {
-        console.log(
-          "[AUTH] Login exitoso."
-        );
-      }
-    },
-    []
-  );
-
-  /**
-   * ==========================================================
-   * LOGOUT
-   * ==========================================================
-   */
-
-  const logout = useCallback(
-    async () => {
-      try {
-        await AsyncStorage.removeItem(
-          "token"
-        );
-
-        await AsyncStorage.removeItem(
-          "username"
-        );
-      } catch (error) {
-        console.error(
-          "[AUTH] ERROR ELIMINANDO SESIÓN:",
-          error
-        );
-      } finally {
-        setToken(null);
-        setUsername(null);
-      }
-    },
-    []
-  );
-
-  /**
-   * ==========================================================
-   * 401 GLOBAL
-   * ==========================================================
-   *
-   * Si cualquier endpoint protegido devuelve:
-   *
-   * 401 Unauthorized
-   *
-   * client.js:
-   *
-   *     ↓
-   * onUnauthorized()
-   *
-   * AuthContext:
-   *
-   *     ↓
-   * logout()
-   *
-   *     ↓
-   * /login
-   */
-
+  // Manejo global de 401
   useEffect(() => {
     setOnUnauthorized(async () => {
-      if (__DEV__) {
-        console.log(
-          "[AUTH] 401 recibido. Cerrando sesión."
-        );
-      }
-
       await logout();
-
       router.replace("/login");
     });
 
@@ -263,12 +158,6 @@ export function AuthProvider({
       setOnUnauthorized(null);
     };
   }, [logout]);
-
-  /**
-   * ==========================================================
-   * CONTEXT PROVIDER
-   * ==========================================================
-   */
 
   return (
     <AuthContext.Provider
@@ -285,19 +174,13 @@ export function AuthProvider({
   );
 }
 
-/**
- * ============================================================
- * HOOK
- * ============================================================
- */
-
 export function useAuth() {
   const context =
     useContext(AuthContext);
 
   if (!context) {
     throw new Error(
-      "useAuth debe usarse dentro de un AuthProvider"
+      "useAuth debe usarse dentro de un AuthProvider."
     );
   }
 

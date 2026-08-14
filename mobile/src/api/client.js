@@ -112,8 +112,20 @@ function log(...args) {
   if (__DEV__) console.log(...args);
 }
 
+// console.error: reservado para fallos reales/inesperados (dispara el
+// overlay de LogBox en desarrollo).
 function logError(...args) {
   if (__DEV__) console.error(...args);
+}
+
+// console.warn: para errores esperados del cliente (4xx) que ya son
+// manejados y comunicados al usuario por la UI; no dispara el overlay.
+function logWarn(...args) {
+  if (__DEV__) console.warn(...args);
+}
+
+function isClientError(status) {
+  return status >= 400 && status < 500;
 }
 
 function isLoginUrl(url) {
@@ -184,7 +196,8 @@ api.interceptors.response.use(
   },
 
   async (error) => {
-    // Sin respuesta HTTP: timeout, red caída, IP incorrecta, firewall
+    // Sin respuesta HTTP: timeout, red caída, IP incorrecta, firewall.
+    // Siempre inesperado → console.error.
     if (!error.response) {
       logError("[API NETWORK ERROR]", {
         message: error.message,
@@ -197,14 +210,21 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    logError("[API ERROR]", {
-      status: error.response.status,
+    const { status } = error.response;
+
+    // 4xx (validación, datos duplicados, no encontrado, etc.) son
+    // esperados por la lógica de negocio → console.warn.
+    // 5xx u otros → console.error.
+    const logFn = isClientError(status) ? logWarn : logError;
+
+    logFn("[API ERROR]", {
+      status,
       url: error.config?.url,
       data: error.response.data,
     });
 
     // 401 fuera del login → limpiar sesión
-    if (error.response.status === 401 && !isLoginUrl(error.config?.url)) {
+    if (status === 401 && !isLoginUrl(error.config?.url)) {
       try {
         await AsyncStorage.multiRemove(["token", "username"]);
       } catch (storageError) {

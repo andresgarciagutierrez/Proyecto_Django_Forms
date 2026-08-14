@@ -1,8 +1,23 @@
 {
   "info": {
-    "name": "Backend - Users & Tasks",
+    "name": "Backend - Users, Tasks & Forms",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "exec": [
+          "// Refresca csrf_token si la respuesta trajo una cookie nueva.",
+          "// Corre para TODOS los requests de la coleccion, asi que ya no",
+          "// hace falta repetir esta captura en cada item individual.",
+          "const csrfToken = pm.cookies.get('csrftoken');",
+          "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
   "item": [
     {
       "name": "Users",
@@ -14,12 +29,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Captura la cookie csrftoken que Django acaba de enviar",
-                  "const csrfToken = pm.cookies.get('csrftoken');",
-                  "pm.environment.set('csrf_token', csrfToken);",
-                  "",
                   "pm.test('Se recibio la cookie CSRF', function () {",
-                  "    pm.expect(csrfToken).to.not.be.undefined;",
+                  "    pm.expect(pm.cookies.get('csrftoken')).to.not.be.undefined;",
                   "});",
                   "",
                   "pm.test('Status es 200', function () {",
@@ -32,6 +43,7 @@
           ],
           "request": {
             "method": "GET",
+            "header": [],
             "url": "{{base_url}}/users/register/"
           }
         },
@@ -42,10 +54,6 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "// Django rota el token CSRF tras cada request exitoso, lo refrescamos",
-                  "const csrfToken = pm.cookies.get('csrftoken');",
-                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
-                  "",
                   "pm.test('Registro procesado (200 render o 302 redirect)', function () {",
                   "    pm.expect([200, 302]).to.include(pm.response.code);",
                   "});"
@@ -57,21 +65,45 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
             ],
+            "url": "{{base_url}}/users/register/",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" },
-                { "key": "username", "value": "postman_test_user" },
-                { "key": "email", "value": "postman_test@example.com" },
-                { "key": "telephone", "value": "3000000000" },
-                { "key": "date_of_birth", "value": "2000-01-01" },
-                { "key": "password1", "value": "{{password}}" },
-                { "key": "password2", "value": "{{password}}" }
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "username",
+                  "value": "postman_test_user"
+                },
+                {
+                  "key": "email",
+                  "value": "postman_test@example.com"
+                },
+                {
+                  "key": "telephone",
+                  "value": "3000000000"
+                },
+                {
+                  "key": "date_of_birth",
+                  "value": "2000-01-01"
+                },
+                {
+                  "key": "password1",
+                  "value": "{{password}}"
+                },
+                {
+                  "key": "password2",
+                  "value": "{{password}}"
+                }
               ]
-            },
-            "url": "{{base_url}}/users/register/"
+            }
           }
         },
         {
@@ -81,11 +113,8 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "const csrfToken = pm.cookies.get('csrftoken');",
-                  "pm.environment.set('csrf_token', csrfToken);",
-                  "",
                   "pm.test('Se recibio la cookie CSRF', function () {",
-                  "    pm.expect(csrfToken).to.not.be.undefined;",
+                  "    pm.expect(pm.cookies.get('csrftoken')).to.not.be.undefined;",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -94,6 +123,7 @@
           ],
           "request": {
             "method": "GET",
+            "header": [],
             "url": "{{base_url}}/users/login/"
           }
         },
@@ -104,9 +134,6 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "const csrfToken = pm.cookies.get('csrftoken');",
-                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
-                  "",
                   "pm.test('Login exitoso (200 o 302)', function () {",
                   "    pm.expect([200, 302]).to.include(pm.response.code);",
                   "});",
@@ -122,17 +149,29 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
             ],
+            "url": "{{base_url}}/users/login/",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" },
-                { "key": "username", "value": "{{username}}" },
-                { "key": "password", "value": "{{password}}" }
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{username}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{password}}"
+                }
               ]
-            },
-            "url": "{{base_url}}/users/login/"
+            }
           }
         },
         {
@@ -153,15 +192,21 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
             ],
+            "url": "{{base_url}}/users/logout/",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" }
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                }
               ]
-            },
-            "url": "{{base_url}}/users/logout/"
+            }
           }
         }
       ]
@@ -176,9 +221,6 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "const csrfToken = pm.cookies.get('csrftoken');",
-                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
-                  "",
                   "// Busca todas las URLs de tipo /tasks/<id>/delete/ en el HTML de la respuesta",
                   "const body = pm.response.text();",
                   "const matches = [...body.matchAll(/\\/tasks\\/(\\d+)\\/delete\\//g)];",
@@ -201,6 +243,7 @@
           ],
           "request": {
             "method": "GET",
+            "header": [],
             "url": "{{base_url}}/tasks/"
           }
         },
@@ -210,16 +253,14 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "const csrfToken = pm.cookies.get('csrftoken');",
-                  "pm.environment.set('csrf_token', csrfToken);"
-                ],
+                "exec": [],
                 "type": "text/javascript"
               }
             }
           ],
           "request": {
             "method": "GET",
+            "header": [],
             "url": "{{base_url}}/tasks/new/"
           }
         },
@@ -230,9 +271,6 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "const csrfToken = pm.cookies.get('csrftoken');",
-                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
-                  "",
                   "pm.test('Tarea creada, redirige a la lista', function () {",
                   "    pm.expect(pm.response.code).to.equal(302);",
                   "    pm.expect(pm.response.headers.get('Location')).to.include('/tasks/');",
@@ -245,17 +283,29 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
             ],
+            "url": "{{base_url}}/tasks/new/",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" },
-                { "key": "title", "value": "Tarea creada desde Postman" },
-                { "key": "description", "value": "Prueba de creacion via Postman" }
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "title",
+                  "value": "Tarea creada desde Postman"
+                },
+                {
+                  "key": "description",
+                  "value": "Prueba de creacion via Postman"
+                }
               ]
-            },
-            "url": "{{base_url}}/tasks/new/"
+            }
           }
         },
         {
@@ -265,9 +315,6 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "const csrfToken = pm.cookies.get('csrftoken');",
-                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
-                  "",
                   "pm.test('Pagina de edicion cargada correctamente', function () {",
                   "    pm.response.to.have.status(200);",
                   "});"
@@ -278,6 +325,7 @@
           ],
           "request": {
             "method": "GET",
+            "header": [],
             "url": "{{base_url}}/tasks/{{task_id}}/edit/"
           }
         },
@@ -288,9 +336,6 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "const csrfToken = pm.cookies.get('csrftoken');",
-                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
-                  "",
                   "pm.test('Tarea actualizada correctamente (200 o 302)', function () {",
                   "    pm.expect([200, 302]).to.include(pm.response.code);",
                   "});"
@@ -302,17 +347,29 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
             ],
+            "url": "{{base_url}}/tasks/{{task_id}}/edit/",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" },
-                { "key": "title", "value": "Tarea actualizada desde Postman" },
-                { "key": "description", "value": "Prueba de actualizacion via Postman" }
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "title",
+                  "value": "Tarea actualizada desde Postman"
+                },
+                {
+                  "key": "description",
+                  "value": "Prueba de actualizacion via Postman"
+                }
               ]
-            },
-            "url": "{{base_url}}/tasks/{{task_id}}/edit/"
+            }
           }
         },
         {
@@ -333,15 +390,308 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
             ],
+            "url": "{{base_url}}/tasks/{{task_id}}/delete/",
             "body": {
               "mode": "urlencoded",
               "urlencoded": [
-                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" }
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                }
               ]
-            },
-            "url": "{{base_url}}/tasks/{{task_id}}/delete/"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Forms",
+      "item": [
+        {
+          "name": "List Forms",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Listado de formularios accesible (200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/forms/"
+          }
+        },
+        {
+          "name": "Create Form",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Formulario creado (201)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "// Guarda los ids generados para usarlos en el resto de requests",
+                  "// de este folder y en el de Form Responses.",
+                  "if (pm.response.code === 201) {",
+                  "    const body = pm.response.json();",
+                  "    pm.environment.set('form_id', body.id);",
+                  "",
+                  "    const textField = body.fields.find(f => f.field_type === 'text');",
+                  "    const choiceField = body.fields.find(f => f.field_type === 'single_choice');",
+                  "",
+                  "    if (textField) { pm.environment.set('field_text_id', textField.id); }",
+                  "    if (choiceField) {",
+                  "        pm.environment.set('field_choice_id', choiceField.id);",
+                  "        if (choiceField.choices && choiceField.choices.length > 0) {",
+                  "            pm.environment.set('choice_id', choiceField.choices[0].id);",
+                  "        }",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRFToken",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/forms/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Encuesta Postman\",\n  \"description\": \"Formulario de prueba creado desde Postman\",\n  \"allow_multiple_responses\": false,\n  \"is_active\": true,\n  \"fields\": [\n    {\n      \"label\": \"Observaciones\",\n      \"field_type\": \"text\",\n      \"is_required\": true\n    },\n    {\n      \"label\": \"Zona\",\n      \"field_type\": \"single_choice\",\n      \"is_required\": true,\n      \"choices\": [\n        {\n          \"text\": \"Urbana\"\n        },\n        {\n          \"text\": \"Rural\"\n        }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get Form Detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Detalle del formulario accesible (200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/forms/{{form_id}}/"
+          }
+        },
+        {
+          "name": "Update Form",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Formulario actualizado (200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRFToken",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/forms/{{form_id}}/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Descripcion actualizada desde Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete Form",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Se deja al final del folder: ejecutar solo cuando ya no",
+                  "// necesites el formulario/respuestas de prueba (borra en cascada).",
+                  "pm.test('Formulario eliminado (204)', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-CSRFToken",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/forms/{{form_id}}/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Form Responses",
+      "item": [
+        {
+          "name": "Create Response (Anonymous)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Respuesta creada (201)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.environment.set('response_id', pm.response.json().id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRFToken",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/responses/",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"form\": \"{{form_id}}\",\n  \"respondent_name\": \"Maria Perez\",\n  \"document_type\": \"CC\",\n  \"document_number\": \"1020304050\",\n  \"answers\": [\n    {\n      \"field\": \"{{field_text_id}}\",\n      \"text_value\": \"Todo en orden\"\n    },\n    {\n      \"field\": \"{{field_choice_id}}\",\n      \"selected_choices\": [\n        \"{{choice_id}}\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List Responses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Listado de respuestas accesible (200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/responses/"
+          }
+        },
+        {
+          "name": "Get Response Detail",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Detalle de la respuesta accesible (200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/responses/{{response_id}}/"
+          }
+        },
+        {
+          "name": "Delete Response",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Respuesta eliminada (204)', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-CSRFToken",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": "{{base_url}}/api/responses/{{response_id}}/"
           }
         }
       ]
