@@ -1,0 +1,95 @@
+{% extends "tasks/base.html" %}
+
+{% block title %}
+Detalle de tarea
+{% endblock %}
+
+
+{% block content %}
+
+<div class="form-container">
+
+    <div class="form-card">
+
+        <div class="form-header">
+
+            <h1>
+                Detalle de la tarea
+            </h1>
+
+            <p>
+                "{{ task.title }}"
+            </p>
+
+        </div>
+
+
+        <form method="post">
+
+            {% csrf_token %}
+
+
+            {{ form.non_field_errors }}
+
+
+            <div class="form-fields">
+
+                {% for field in form %}
+
+                    <div class="form-group">
+
+                        {{ field.label_tag }}
+
+                        {{ field }}
+
+
+                        {% if field.help_text %}
+
+                            <small class="help-text">
+                                {{ field.help_text }}
+                            </small>
+
+                        {% endif %}
+
+
+                        {% if field.errors %}
+
+                            <div class="field-errors">
+                                {{ field.errors }}
+                            </div>
+
+                        {% endif %}
+
+                    </div>
+
+                {% endfor %}
+
+            </div>
+
+
+            <div class="form-actions">
+
+                <button
+                    type="submit"
+                    class="button button-primary"
+                >
+                    Guardar detalle
+                </button>
+
+
+                <a
+                    href="{% url 'tasks:list' %}"
+                    class="button button-secondary"
+                >
+                    Volver
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,563 @@
+/* =========================================================
+   RESET
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+
+/* =========================================================
+   BODY
+   ========================================================= */
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #f4f6f8;
+    color: #1f2937;
+    min-height: 100vh;
+}
+
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+
+.navbar {
+    background-color: #111827;
+    padding: 16px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.navbar-container {
+    width: 90%;
+    max-width: 1000px;
+    margin: 0 auto;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.brand {
+    color: white;
+    text-decoration: none;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.nav-button {
+    background-color: #2563eb;
+    color: white;
+    text-decoration: none;
+
+    padding: 9px 14px;
+    border-radius: 7px;
+
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.nav-button:hover {
+    background-color: #1d4ed8;
+}
+
+
+/* =========================================================
+   CONTENEDOR
+   ========================================================= */
+
+.container {
+    width: 90%;
+    max-width: 1000px;
+    margin: 40px auto;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    margin-bottom: 30px;
+}
+
+.page-header h1 {
+    font-size: 32px;
+    color: #111827;
+}
+
+.page-description {
+    margin-top: 6px;
+    color: #6b7280;
+}
+
+
+/* =========================================================
+   BOTONES
+   ========================================================= */
+
+.button {
+    display: inline-block;
+
+    border: none;
+    padding: 10px 16px;
+
+    border-radius: 7px;
+
+    text-decoration: none;
+
+    font-size: 14px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+.button-primary {
+    background-color: #2563eb;
+    color: white;
+}
+
+.button-primary:hover {
+    background-color: #1d4ed8;
+}
+
+.button-secondary {
+    background-color: #e5e7eb;
+    color: #374151;
+}
+
+.button-secondary:hover {
+    background-color: #d1d5db;
+}
+
+.button-danger {
+    background-color: #dc2626;
+    color: white;
+}
+
+.button-danger:hover {
+    background-color: #b91c1c;
+}
+
+
+/* =========================================================
+   TAREAS
+   ========================================================= */
+
+.task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.task-card {
+    background-color: white;
+
+    padding: 20px;
+    border-radius: 10px;
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.task-title {
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: #111827;
+}
+
+.task-description {
+    color: #6b7280;
+    margin-bottom: 10px;
+}
+
+.task-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.status {
+    display: inline-block;
+
+    padding: 5px 9px;
+    border-radius: 20px;
+
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-completed {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.status-pending {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+
+/* =========================================================
+   ESTADO VACÍO
+   ========================================================= */
+
+.empty-state {
+    background-color: white;
+
+    padding: 50px;
+    border-radius: 10px;
+
+    text-align: center;
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.empty-state h2 {
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    color: #6b7280;
+    margin-bottom: 20px;
+}
+
+
+/* =========================================================
+   FORMULARIO
+   ========================================================= */
+
+.form-container {
+    display: flex;
+    justify-content: center;
+}
+
+.form-card {
+    width: 100%;
+    max-width: 650px;
+
+    background-color: white;
+
+    padding: 30px;
+    border-radius: 10px;
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.form-header {
+    margin-bottom: 25px;
+}
+
+.form-header h1 {
+    margin-bottom: 7px;
+}
+
+.form-header p {
+    color: #6b7280;
+}
+
+.form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-weight: bold;
+    color: #374151;
+}
+
+
+/* =========================================================
+   INPUTS NORMALES
+   ========================================================= */
+
+.form-group input:not([type="checkbox"]),
+.form-group textarea,
+.form-group select {
+    width: 100%;
+
+    padding: 10px;
+
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+
+    font-family: inherit;
+    font-size: 14px;
+
+    background-color: white;
+}
+
+
+/* =========================================================
+   TEXTAREA
+   ========================================================= */
+
+.form-group textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+
+/* =========================================================
+   FOCUS DE INPUTS
+   ========================================================= */
+
+.form-group input:not([type="checkbox"]):focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+
+    border-color: #2563eb;
+
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+
+/* =========================================================
+   CHECKBOX - IS COMPLETED
+   ========================================================= */
+
+/*
+   Django genera el checkbox dentro de un <p>.
+   Esta regla coloca el texto y el checkbox
+   horizontalmente.
+*/
+
+.form-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+
+    margin: 0;
+
+    padding: 0;
+
+    cursor: pointer;
+
+    accent-color: #2563eb;
+}
+
+
+/*
+   Contenedor del checkbox.
+*/
+
+.form-group:has(input[type="checkbox"]) {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+
+
+/*
+   La etiqueta del checkbox no debe ocupar
+   todo el ancho.
+*/
+
+.form-group:has(input[type="checkbox"]) label {
+    margin: 0;
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   TEXTOS DE AYUDA
+   ========================================================= */
+
+.help-text {
+    color: #6b7280;
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   ERRORES
+   ========================================================= */
+
+.field-errors {
+    color: #dc2626;
+    font-size: 13px;
+}
+
+
+/* =========================================================
+   ACCIONES DEL FORMULARIO
+   ========================================================= */
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+
+    margin-top: 25px;
+}
+
+
+/* =========================================================
+   ELIMINAR
+   ========================================================= */
+
+.delete-container {
+    display: flex;
+    justify-content: center;
+}
+
+.delete-card {
+    width: 100%;
+    max-width: 500px;
+
+    background-color: white;
+
+    padding: 40px;
+    border-radius: 10px;
+
+    text-align: center;
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.delete-icon {
+    width: 45px;
+    height: 45px;
+
+    margin: 0 auto 20px;
+
+    border-radius: 50%;
+
+    background-color: #fee2e2;
+    color: #dc2626;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.delete-card h1 {
+    margin-bottom: 15px;
+}
+
+.delete-message {
+    color: #6b7280;
+}
+
+.delete-task-name {
+    margin: 10px 0;
+
+    font-weight: bold;
+    font-size: 18px;
+
+    color: #111827;
+}
+
+.delete-warning {
+    color: #dc2626;
+
+    font-size: 14px;
+
+    margin-bottom: 25px;
+}
+
+.delete-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .task-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .task-actions {
+        width: 100%;
+    }
+
+    .task-actions .button {
+        flex: 1;
+        text-align: center;
+    }
+
+    .navbar-container {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .form-card {
+        padding: 20px;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions .button {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* =========================
+   CATEGORÍAS
+========================= */
+
+.task-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.category {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 20px;
+    background-color: #e0e7ff;
+    color: #3730a3;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.no-category {
+    color: #9ca3af;
+    font-size: 12px;
+}
+
+
+/* =========================
+   SELECT DE CATEGORÍAS
+========================= */
+
+.category-select {
+    min-height: 120px;
+}

@@ -1,0 +1,162 @@
+{% extends "tasks/base.html" %}
+
+{% block title %}
+Mis tareas
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+
+    <div>
+
+        <h1>
+            Mis tareas
+        </h1>
+
+        <p class="page-description">
+            Administra y organiza tus tareas.
+        </p>
+
+    </div>
+
+    <a
+        href="{% url 'tasks:create' %}"
+        class="button button-primary"
+    >
+        + Nueva tarea
+    </a>
+
+</div>
+
+
+{% if tasks %}
+
+    <div class="task-list">
+
+        {% for task in tasks %}
+
+            <div class="task-card">
+
+                <div class="task-content">
+
+                    <h2 class="task-title">
+                        {{ task.title }}
+                    </h2>
+
+
+                    {% if task.description %}
+
+                        <p class="task-description">
+                            {{ task.description }}
+                        </p>
+
+                    {% endif %}
+
+
+                    <!-- Estado -->
+
+                    {% if task.is_completed %}
+
+                        <span class="status status-completed">
+                            ✓ Completada
+                        </span>
+
+                    {% else %}
+
+                        <span class="status status-pending">
+                            Pendiente
+                        </span>
+
+                    {% endif %}
+
+
+                    <!-- Prioridad -->
+
+                    {% if task.detail %}
+
+                        <span class="status status-priority-{{ task.detail.priority }}">
+                            {{ task.detail.get_priority_display }}
+                        </span>
+
+                    {% endif %}
+
+
+                    <!-- Categorías -->
+
+                    <div class="task-categories">
+
+                        {% for category in task.categories.all %}
+
+                            <span class="category">
+                                {{ category.name }}
+                            </span>
+
+                        {% empty %}
+
+                            <span class="no-category">
+                                Sin categoría
+                            </span>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+
+                <div class="task-actions">
+
+                    <a
+                        href="{% url 'tasks:edit' task.pk %}"
+                        class="button button-secondary"
+                    >
+                        Editar
+                    </a>
+
+                    <a
+                        href="{% url 'tasks:detail' task.pk %}"
+                        class="button button-secondary"
+                    >
+                        Detalle
+                    </a>
+
+                    <a
+                        href="{% url 'tasks:delete' task.pk %}"
+                        class="button button-danger"
+                    >
+                        Eliminar
+                    </a>
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+{% else %}
+
+    <div class="empty-state">
+
+        <h2>
+            No tienes tareas todavía
+        </h2>
+
+        <p>
+            Crea tu primera tarea para comenzar.
+        </p>
+
+        <a
+            href="{% url 'tasks:create' %}"
+            class="button button-primary"
+        >
+            Crear tarea
+        </a>
+
+    </div>
+
+{% endif %}
+
+{% endblock %}

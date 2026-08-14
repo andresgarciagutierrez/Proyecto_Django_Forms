@@ -1,0 +1,68 @@
+{% extends "tasks/base.html" %}
+
+{% block title %}
+Eliminar tarea
+{% endblock %}
+
+
+{% block content %}
+
+<div class="delete-container">
+
+    <div class="delete-card">
+
+        <div class="delete-icon">
+            !
+        </div>
+
+
+        <h1>
+            ¿Eliminar tarea?
+        </h1>
+
+
+        <p class="delete-message">
+            Estás a punto de eliminar:
+        </p>
+
+
+        <p class="delete-task-name">
+            "{{ object.title }}"
+        </p>
+
+
+        <p class="delete-warning">
+            Esta acción no se puede deshacer.
+        </p>
+
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <div class="delete-actions">
+
+                <button
+                    type="submit"
+                    class="button button-danger"
+                >
+                    Sí, eliminar
+                </button>
+
+
+                <a
+                    href="{% url 'tasks:list' %}"
+                    class="button button-secondary"
+                >
+                    Cancelar
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

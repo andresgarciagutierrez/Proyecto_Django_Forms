@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+|--------------------------------------------------------------------------
+| PALETA GLOBAL
+|--------------------------------------------------------------------------
+*/
+
+@layer utilities {
+  /* ==========================================================
+     FONDOS
+  ========================================================== */
+
+  .health-bg {
+    @apply bg-slate-50;
+  }
+
+  .health-surface {
+    @apply bg-white;
+  }
+
+  .health-surface-muted {
+    @apply bg-slate-50;
+  }
+
+  /* ==========================================================
+     COLOR PRINCIPAL
+  ========================================================== */
+
+  .health-primary {
+    @apply bg-sky-600;
+  }
+
+  .health-primary-dark {
+    @apply bg-sky-700;
+  }
+
+  .health-primary-light {
+    @apply bg-sky-50;
+  }
+
+  /* ==========================================================
+     TEXTO
+  ========================================================== */
+
+  .health-text {
+    @apply text-slate-900;
+  }
+
+  .health-text-secondary {
+    @apply text-slate-600;
+  }
+
+  .health-text-muted {
+    @apply text-slate-400;
+  }
+
+  .health-text-primary {
+    @apply text-sky-700;
+  }
+
+  /* ==========================================================
+     BORDES
+  ========================================================== */
+
+  .health-border {
+    @apply border-slate-200;
+  }
+
+  .health-border-input {
+    @apply border-slate-300;
+  }
+
+  .health-border-primary {
+    @apply border-sky-600;
+  }
+
+  /* ==========================================================
+     ESTADOS
+  ========================================================== */
+
+  .health-success {
+    @apply bg-green-600;
+  }
+
+  .health-success-light {
+    @apply bg-green-50;
+  }
+
+  .health-success-border {
+    @apply border-green-300;
+  }
+
+  .health-success-text {
+    @apply text-green-700;
+  }
+
+  .health-error-light {
+    @apply bg-red-50;
+  }
+
+  .health-error-border {
+    @apply border-red-300;
+  }
+
+  .health-error-text {
+    @apply text-red-700;
+  }
+
+  /* ==========================================================
+     TARJETA
+  ========================================================== */
+
+  .health-card {
+    @apply bg-white rounded-2xl border border-slate-200 p-5;
+  }
+
+  /* ==========================================================
+     INPUT
+  ========================================================== */
+
+  .health-input {
+    @apply bg-white border border-slate-300 rounded-lg px-3 py-3 text-slate-900;
+  }
+
+  /* ==========================================================
+     BOTONES
+  ========================================================== */
+
+  .health-button-primary {
+    @apply bg-sky-600 rounded-lg py-3 px-4;
+  }
+
+  .health-button-success {
+    @apply bg-green-600 rounded-lg py-3 px-4;
+  }
+
+  .health-button-disabled {
+    @apply bg-slate-400 rounded-lg py-3 px-4;
+  }
+}

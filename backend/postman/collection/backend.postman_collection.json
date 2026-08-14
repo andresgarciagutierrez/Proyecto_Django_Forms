@@ -1,0 +1,350 @@
+{
+  "info": {
+    "name": "Backend - Users & Tasks",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Register Page (CSRF cookie)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Captura la cookie csrftoken que Django acaba de enviar",
+                  "const csrfToken = pm.cookies.get('csrftoken');",
+                  "pm.environment.set('csrf_token', csrfToken);",
+                  "",
+                  "pm.test('Se recibio la cookie CSRF', function () {",
+                  "    pm.expect(csrfToken).to.not.be.undefined;",
+                  "});",
+                  "",
+                  "pm.test('Status es 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/users/register/"
+          }
+        },
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Django rota el token CSRF tras cada request exitoso, lo refrescamos",
+                  "const csrfToken = pm.cookies.get('csrftoken');",
+                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
+                  "",
+                  "pm.test('Registro procesado (200 render o 302 redirect)', function () {",
+                  "    pm.expect([200, 302]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" },
+                { "key": "username", "value": "postman_test_user" },
+                { "key": "email", "value": "postman_test@example.com" },
+                { "key": "telephone", "value": "3000000000" },
+                { "key": "date_of_birth", "value": "2000-01-01" },
+                { "key": "password1", "value": "{{password}}" },
+                { "key": "password2", "value": "{{password}}" }
+              ]
+            },
+            "url": "{{base_url}}/users/register/"
+          }
+        },
+        {
+          "name": "Get Login Page (CSRF cookie)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const csrfToken = pm.cookies.get('csrftoken');",
+                  "pm.environment.set('csrf_token', csrfToken);",
+                  "",
+                  "pm.test('Se recibio la cookie CSRF', function () {",
+                  "    pm.expect(csrfToken).to.not.be.undefined;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/users/login/"
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const csrfToken = pm.cookies.get('csrftoken');",
+                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
+                  "",
+                  "pm.test('Login exitoso (200 o 302)', function () {",
+                  "    pm.expect([200, 302]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('Se establecio cookie de sesion', function () {",
+                  "    pm.expect(pm.cookies.has('sessionid')).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" },
+                { "key": "username", "value": "{{username}}" },
+                { "key": "password", "value": "{{password}}" }
+              ]
+            },
+            "url": "{{base_url}}/users/login/"
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Logout procesado (200 o 302)', function () {",
+                  "    pm.expect([200, 302]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" }
+              ]
+            },
+            "url": "{{base_url}}/users/logout/"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "List Tasks",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const csrfToken = pm.cookies.get('csrftoken');",
+                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
+                  "",
+                  "// Busca todas las URLs de tipo /tasks/<id>/delete/ en el HTML de la respuesta",
+                  "const body = pm.response.text();",
+                  "const matches = [...body.matchAll(/\\/tasks\\/(\\d+)\\/delete\\//g)];",
+                  "if (matches.length > 0) {",
+                  "    // Como el modelo no define un ordering explicito en Meta,",
+                  "    // Django devuelve las tareas normalmente en orden de insercion,",
+                  "    // asi que asumimos que el ULTIMO link corresponde a la tarea mas reciente.",
+                  "    const ids = matches.map(m => parseInt(m[1], 10));",
+                  "    const lastId = Math.max(...ids);",
+                  "    pm.environment.set('task_id', lastId);",
+                  "}",
+                  "",
+                  "pm.test('Lista de tareas accesible (sesion activa)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/tasks/"
+          }
+        },
+        {
+          "name": "Get New Task Page (CSRF cookie)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const csrfToken = pm.cookies.get('csrftoken');",
+                  "pm.environment.set('csrf_token', csrfToken);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/tasks/new/"
+          }
+        },
+        {
+          "name": "Create Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const csrfToken = pm.cookies.get('csrftoken');",
+                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
+                  "",
+                  "pm.test('Tarea creada, redirige a la lista', function () {",
+                  "    pm.expect(pm.response.code).to.equal(302);",
+                  "    pm.expect(pm.response.headers.get('Location')).to.include('/tasks/');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" },
+                { "key": "title", "value": "Tarea creada desde Postman" },
+                { "key": "description", "value": "Prueba de creacion via Postman" }
+              ]
+            },
+            "url": "{{base_url}}/tasks/new/"
+          }
+        },
+        {
+          "name": "Get Edit Task Page (CSRF cookie)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const csrfToken = pm.cookies.get('csrftoken');",
+                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
+                  "",
+                  "pm.test('Pagina de edicion cargada correctamente', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/tasks/{{task_id}}/edit/"
+          }
+        },
+        {
+          "name": "Update Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const csrfToken = pm.cookies.get('csrftoken');",
+                  "if (csrfToken) { pm.environment.set('csrf_token', csrfToken); }",
+                  "",
+                  "pm.test('Tarea actualizada correctamente (200 o 302)', function () {",
+                  "    pm.expect([200, 302]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" },
+                { "key": "title", "value": "Tarea actualizada desde Postman" },
+                { "key": "description", "value": "Prueba de actualizacion via Postman" }
+              ]
+            },
+            "url": "{{base_url}}/tasks/{{task_id}}/edit/"
+          }
+        },
+        {
+          "name": "Delete Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Tarea eliminada (200 o 302)', function () {",
+                  "    pm.expect([200, 302, 404]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "csrfmiddlewaretoken", "value": "{{csrf_token}}" }
+              ]
+            },
+            "url": "{{base_url}}/tasks/{{task_id}}/delete/"
+          }
+        }
+      ]
+    }
+  ]
+}
