@@ -175,6 +175,109 @@
           }
         },
         {
+          "name": "Get Profile Page",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Perfil accesible con sesion activa (200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/users/profile/"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Perfil actualizado (200 o 302)', function () {",
+                  "    pm.expect([200, 302]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "url": "{{base_url}}/users/profile/",
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "csrfmiddlewaretoken",
+                  "value": "{{csrf_token}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{username}}"
+                },
+                {
+                  "key": "email",
+                  "value": "postman_test@example.com"
+                },
+                {
+                  "key": "telephone",
+                  "value": "3000000000"
+                },
+                {
+                  "key": "date_of_birth",
+                  "value": "2000-01-01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Me (perfil y rol via API)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('/users/me/ accesible con sesion activa (200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.test('La respuesta trae username e is_form_creator', function () {",
+                  "        pm.expect(body).to.have.property('username');",
+                  "        pm.expect(body).to.have.property('is_staff');",
+                  "        pm.expect(body).to.have.property('is_superuser');",
+                  "        pm.expect(body).to.have.property('is_form_creator');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/users/me/"
+          }
+        },
+        {
           "name": "Logout",
           "event": [
             {

@@ -10,7 +10,8 @@ class UserRegisterForm(UserCreationForm):
 
 
 class UserProfileForm(UserChangeForm):
-    password = None  # Exclude the password field from the form
+
+    password = None
 
     class Meta(UserChangeForm.Meta):
         model = User

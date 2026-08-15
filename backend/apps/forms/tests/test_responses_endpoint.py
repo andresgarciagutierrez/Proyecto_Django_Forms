@@ -1,4 +1,8 @@
+import threading
+
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test import Client
 from django.urls import reverse
 import pytest
 
@@ -250,3 +254,64 @@ def test_field_with_answers_cannot_change_type(client, sample_form, user):
     )
 
     assert response.status_code == 400
+
+
+# =========================================================
+# CONCURRENCIA (condición de carrera en documento duplicado)
+# =========================================================
+
+
+@pytest.mark.django_db(transaction=True)
+def test_duplicate_document_race_condition_only_one_response_wins(sample_form):
+    """
+    Regresión del fix de select_for_update en FormResponseSerializer.
+
+    transaction=True es obligatorio aquí: con el modo atomic por
+    defecto (el pytestmark del módulo), todo el test corre dentro
+    de UNA sola transacción compartida y nunca hay dos conexiones
+    reales compitiendo por el lock, así que la condición de carrera
+    sería imposible de reproducir. Con transaction=True, sample_form
+    se commitea de verdad a la base y cada thread abre su propia
+    conexión — recién ahí el select_for_update entra en juego.
+    """
+    form, field_text, field_choice, choice = sample_form
+    payload = _payload(form, field_text, field_choice, choice, doc="CONCURRENT-001")
+
+    thread_count = 5
+    # El Barrier obliga a que las N requests arranquen en el mismo
+    # instante en vez de ir una detrás de otra (lo que las
+    # serializaría de todos modos y no probaría nada).
+    barrier = threading.Barrier(thread_count)
+    results = []
+    results_lock = threading.Lock()
+
+    def submit():
+        barrier.wait()
+        try:
+            # Client() nuevo por thread: cada uno arrastra su propia
+            # conexión a la base (thread-local en Django), que es lo
+            # que se necesita para simular requests HTTP concurrentes
+            # reales.
+            response = _post_response(Client(), payload)
+            with results_lock:
+                results.append(response.status_code)
+        finally:
+            # Cada thread abre su propia conexión a Postgres y nadie
+            # la cierra automáticamente al no ser un request real
+            # servido por el WSGI handler. Si no se cierra aquí,
+            # pytest-django falla al hacer teardown de la base de
+            # test porque Postgres ve sesiones todavía abiertas.
+            connection.close()
+
+    threads = [threading.Thread(target=submit) for _ in range(thread_count)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    # Exactamente una request debe haber creado la respuesta; el
+    # resto debe haber sido rechazada por documento duplicado.
+    assert results.count(201) == 1
+    assert results.count(400) == thread_count - 1
+
+    assert FormResponse.objects.filter(document_number="CONCURRENT-001").count() == 1

@@ -1,4 +1,3 @@
-from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -6,11 +5,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
+from .forms import UserProfileForm, UserRegisterForm
 from .models import User
-from .forms import UserRegisterForm, UserProfileForm
 
 
-# Create your views here.
 class UserRegisterView(CreateView):
     form_class = UserRegisterForm
     template_name = "users/register.html"
