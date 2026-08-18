@@ -16,16 +16,20 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.authtoken.views import obtain_auth_token
 
-from apps.users.views import MeView
+from apps.users.views import MeView, RegisterAPIView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    # Vistas HTML (sesión + templates), no API.
     path("users/", include("apps.users.urls")),
     path("tasks/", include("apps.tasks.urls")),
+    # API REST bajo /api/ (usada por el frontend, autenticada por
+    # token o sesión según el endpoint).
     path("api/", include("apps.forms.urls")),
     path("api/token/", obtain_auth_token, name="api_token"),
     path("api/me/", MeView.as_view(), name="api_me"),
+    path("api/register/", RegisterAPIView.as_view(), name="api_register"),
 ]

@@ -19,22 +19,16 @@ export default function FormsList() {
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
 
-  const {
-    token,
-    username,
-    role,
-    canManageForms,
-  } = useAuth();
+  // isStaff/isSuperuser ya vienen calculados desde AuthContext (a partir
+  // de role.is_staff / role.is_superuser) — antes se recalculaban acá
+  // mismo desde "role" en vez de reusar lo que el contexto ya expone.
+  const { token, username, isStaff, isSuperuser, canManageForms } = useAuth();
 
   const navigate = useNavigate();
 
   // =========================================================
   // PERMISOS
   // =========================================================
-
-  const isStaff =
-    Boolean(role?.is_staff) ||
-    Boolean(role?.is_superuser);
 
   /**
    * Determina si el usuario puede administrar ESTE formulario.
@@ -47,27 +41,15 @@ export default function FormsList() {
    * - Propietario -> puede administrar su propio formulario.
    */
   const canManageThisForm = (form) => {
-    // Nunca permitir acciones administrativas
-    // si no hay sesión.
     if (!token) {
       return false;
     }
 
-    // Staff / superuser pueden administrar cualquiera.
-    if (isStaff) {
+    if (isStaff || isSuperuser) {
       return true;
     }
 
-    // Usuario normal solamente su propio formulario.
-    if (
-      username &&
-      form?.created_by &&
-      form.created_by === username
-    ) {
-      return true;
-    }
-
-    return false;
+    return Boolean(username && form?.created_by && form.created_by === username);
   };
 
   // =========================================================
@@ -205,26 +187,7 @@ export default function FormsList() {
               {token && canManageForms && (
                 <Link
                   to="/forms/new"
-                  className="
-                    inline-flex
-                    items-center
-                    justify-center
-                    gap-2
-                    w-full
-                    sm:w-auto
-                    bg-sky-600
-                    hover:bg-sky-700
-                    text-white
-                    font-semibold
-                    text-sm
-                    px-5
-                    py-2.5
-                    rounded-xl
-                    shadow-sm
-                    hover:shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                  "
+                  className="inline-flex items-center justify-center gap-2 w-full sm:w-auto bg-sky-600 hover:bg-sky-700 text-white font-semibold text-sm px-5 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
                 >
 
                   <svg
@@ -288,15 +251,7 @@ export default function FormsList() {
               {[1, 2, 3, 4].map((item) => (
                 <div
                   key={item}
-                  className="
-                    bg-white
-                    p-5
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    shadow-sm
-                    animate-pulse
-                  "
+                  className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm animate-pulse"
                 >
 
                   <div className="h-5 bg-slate-200 rounded w-1/2 mb-4" />
@@ -322,29 +277,9 @@ export default function FormsList() {
             !error &&
             forms.length === 0 && (
 
-              <div className="
-                bg-white
-                p-8
-                sm:p-12
-                rounded-2xl
-                border
-                border-slate-200
-                shadow-sm
-                text-center
-              ">
+              <div className="bg-white p-8 sm:p-12 rounded-2xl border border-slate-200 shadow-sm text-center">
 
-                <div className="
-                  w-12
-                  h-12
-                  bg-sky-50
-                  text-sky-600
-                  rounded-2xl
-                  flex
-                  items-center
-                  justify-center
-                  mx-auto
-                  mb-4
-                ">
+                <div className="w-12 h-12 bg-sky-50 text-sky-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
 
                   <svg
                     className="w-6 h-6"
@@ -376,17 +311,7 @@ export default function FormsList() {
                 {token && canManageForms && (
                   <Link
                     to="/forms/new"
-                    className="
-                      inline-flex
-                      items-center
-                      gap-1.5
-                      mt-4
-                      text-sm
-                      font-semibold
-                      text-sky-600
-                      hover:text-sky-700
-                      hover:underline
-                    "
+                    className="inline-flex items-center gap-1.5 mt-4 text-sm font-semibold text-sky-600 hover:text-sky-700 hover:underline"
                   >
                     Crear mi primer formulario →
                   </Link>
@@ -404,12 +329,7 @@ export default function FormsList() {
             !error &&
             forms.length > 0 && (
 
-              <div className="
-                grid
-                grid-cols-1
-                md:grid-cols-2
-                gap-4
-              ">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                 {forms.map((form) => {
 
@@ -420,25 +340,7 @@ export default function FormsList() {
 
                     <article
                       key={form.id}
-                      className="
-                        group
-                        relative
-                        flex
-                        flex-col
-                        justify-between
-                        bg-white
-                        p-5
-                        rounded-2xl
-                        border
-                        border-slate-200
-                        shadow-sm
-                        hover:shadow-md
-                        hover:border-sky-300
-                        transition-all
-                        duration-200
-                        border-l-4
-                        border-l-sky-500
-                      "
+                      className="group relative flex flex-col justify-between bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-sky-300 transition-all duration-200 border-l-4 border-l-sky-500"
                     >
 
                       {/* =================================================
@@ -452,32 +354,12 @@ export default function FormsList() {
                             `/forms/${form.id}`
                           )
                         }
-                        className="
-                          text-left
-                          w-full
-                          focus:outline-none
-                          focus-visible:ring-2
-                          focus-visible:ring-sky-500
-                          rounded-lg
-                        "
+                        className="text-left w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg"
                       >
 
                         <div className="flex items-start gap-3">
 
-                          <div className="
-                            w-9
-                            h-9
-                            rounded-lg
-                            bg-sky-50
-                            text-sky-600
-                            flex
-                            items-center
-                            justify-center
-                            shrink-0
-                            group-hover:bg-sky-600
-                            group-hover:text-white
-                            transition-colors
-                          ">
+                          <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 group-hover:bg-sky-600 group-hover:text-white transition-colors">
 
                             <svg
                               className="w-4 h-4"
@@ -489,7 +371,7 @@ export default function FormsList() {
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth="2"
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                               />
                             </svg>
 
@@ -498,24 +380,11 @@ export default function FormsList() {
 
                           <div className="min-w-0 flex-1">
 
-                            <h2 className="
-                              font-bold
-                              text-slate-800
-                              text-base
-                              group-hover:text-sky-600
-                              transition-colors
-                              break-words
-                            ">
+                            <h2 className="font-bold text-slate-800 text-base group-hover:text-sky-600 transition-colors break-words">
                               {form.title}
                             </h2>
 
-                            <p className="
-                              text-sm
-                              text-slate-500
-                              mt-1
-                              line-clamp-2
-                              leading-relaxed
-                            ">
+                            <p className="text-sm text-slate-500 mt-1 line-clamp-2 leading-relaxed">
                               {form.description ||
                                 "Sin descripción proporcionada."}
                             </p>
@@ -531,33 +400,14 @@ export default function FormsList() {
                           ACCIONES
                       ================================================== */}
 
-                      <div className="
-                        mt-5
-                        pt-4
-                        border-t
-                        border-slate-100
-                        flex
-                        flex-wrap
-                        items-center
-                        justify-between
-                        gap-3
-                      ">
+                      <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
 
-                        <span className="
-                          text-xs
-                          font-medium
-                          text-slate-400
-                        ">
+                        <span className="text-xs font-medium text-slate-400">
                           Activo
                         </span>
 
 
-                        <div className="
-                          flex
-                          flex-wrap
-                          items-center
-                          gap-3
-                        ">
+                        <div className="flex flex-wrap items-center gap-3">
 
                           {/* =============================================
                               EDITAR / ELIMINAR
@@ -572,14 +422,7 @@ export default function FormsList() {
                             <>
                               <Link
                                 to={`/forms/${form.id}/edit`}
-                                className="
-                                  text-xs
-                                  sm:text-sm
-                                  font-semibold
-                                  text-slate-500
-                                  hover:text-sky-600
-                                  hover:underline
-                                "
+                                className="text-xs sm:text-sm font-semibold text-slate-500 hover:text-sky-600 hover:underline"
                               >
                                 Editar
                               </Link>
@@ -592,16 +435,7 @@ export default function FormsList() {
                                 disabled={
                                   deletingId === form.id
                                 }
-                                className="
-                                  text-xs
-                                  sm:text-sm
-                                  font-semibold
-                                  text-rose-500
-                                  hover:text-rose-600
-                                  hover:underline
-                                  disabled:opacity-50
-                                  disabled:cursor-not-allowed
-                                "
+                                className="text-xs sm:text-sm font-semibold text-rose-500 hover:text-rose-600 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {deletingId === form.id
                                   ? "Eliminando..."
@@ -619,17 +453,7 @@ export default function FormsList() {
 
                           <Link
                             to={`/forms/${form.id}`}
-                            className="
-                              inline-flex
-                              items-center
-                              gap-1
-                              text-xs
-                              sm:text-sm
-                              font-semibold
-                              text-sky-600
-                              hover:text-sky-700
-                              hover:underline
-                            "
+                            className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold text-sky-600 hover:text-sky-700 hover:underline"
                           >
                             Diligenciar
 

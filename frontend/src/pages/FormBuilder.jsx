@@ -13,8 +13,6 @@ const FIELD_TYPES = [
 
 const CHOICE_TYPES = ["single_choice", "multiple_choice"];
 
-const reindex = (list) => list.map((item, i) => ({ ...item, order: i + 1 }));
-
 export default function FormBuilder() {
   const { id } = useParams();
   const isEditMode = Boolean(id);
@@ -28,7 +26,6 @@ export default function FormBuilder() {
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
 
-  // En modo edición, carga los datos actuales del formulario para prellenar.
   useEffect(() => {
     if (!isEditMode) return;
 
@@ -40,12 +37,11 @@ export default function FormBuilder() {
         setAllowMultiple(data.allow_multiple_responses);
         setFields(
           data.fields.map((f) => ({
-            id: f.id, // se conserva para que el backend sepa qué actualizar
+            id: f.id,
             label: f.label,
             field_type: f.field_type,
             is_required: f.is_required,
-            order: f.order,
-            choices: f.choices.map((c) => ({ id: c.id, text: c.text, order: c.order })),
+            choices: f.choices ? f.choices.map((c) => ({ id: c.id, text: c.text })) : [],
           }))
         );
       })
@@ -54,40 +50,55 @@ export default function FormBuilder() {
   }, [id, isEditMode]);
 
   const addField = () => {
-    setFields([
-      ...fields,
-      { label: "", field_type: "text", is_required: true, order: fields.length + 1, choices: [] },
+    setFields((prev) => [
+      ...prev,
+      { label: "", field_type: "text", is_required: true, choices: [] },
     ]);
   };
 
+  const removeField = (index) => {
+    setFields((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const updateField = (index, key, value) => {
-    const updated = [...fields];
-    updated[index][key] = value;
-    setFields(updated);
+    setFields((prev) =>
+      prev.map((field, i) => (i === index ? { ...field, [key]: value } : field))
+    );
   };
 
   const addChoice = (fieldIndex) => {
-    const updated = [...fields];
-    updated[fieldIndex].choices.push({ text: "", order: updated[fieldIndex].choices.length + 1 });
-    setFields(updated);
+    setFields((prev) =>
+      prev.map((field, i) =>
+        i === fieldIndex
+          ? { ...field, choices: [...field.choices, { text: "" }] }
+          : field
+      )
+    );
   };
 
   const updateChoice = (fieldIndex, choiceIndex, value) => {
-    const updated = [...fields];
-    updated[fieldIndex].choices[choiceIndex].text = value;
-    setFields(updated);
+    setFields((prev) =>
+      prev.map((field, i) =>
+        i === fieldIndex
+          ? {
+              ...field,
+              choices: field.choices.map((choice, ci) =>
+                ci === choiceIndex ? { ...choice, text: value } : choice
+              ),
+            }
+          : field
+      )
+    );
   };
 
   const removeChoice = (fieldIndex, choiceIndex) => {
-    const updated = [...fields];
-    updated[fieldIndex].choices = reindex(
-      updated[fieldIndex].choices.filter((_, i) => i !== choiceIndex)
+    setFields((prev) =>
+      prev.map((field, i) =>
+        i === fieldIndex
+          ? { ...field, choices: field.choices.filter((_, ci) => ci !== choiceIndex) }
+          : field
+      )
     );
-    setFields(updated);
-  };
-
-  const removeField = (index) => {
-    setFields(reindex(fields.filter((_, i) => i !== index)));
   };
 
   const validate = () => {
@@ -134,11 +145,18 @@ export default function FormBuilder() {
       }
       navigate("/forms");
     } catch (err) {
-      setError(
-        err.response?.status === 403
-          ? "No tienes permiso para modificar este formulario."
-          : "Ocurrió un error al guardar el formulario."
-      );
+      if (err.response?.status === 400 && err.response?.data) {
+        const apiErrors = err.response.data;
+        if (apiErrors.fields) {
+          setError(Array.isArray(apiErrors.fields) ? apiErrors.fields.join(" ") : apiErrors.fields);
+        } else {
+          setError("Revisa los datos enviados. Hay errores de validación.");
+        }
+      } else if (err.response?.status === 403) {
+        setError("No tienes permiso para modificar este formulario.");
+      } else {
+        setError("Ocurrió un error al guardar el formulario.");
+      }
     } finally {
       setSaving(false);
     }
@@ -256,51 +274,51 @@ export default function FormBuilder() {
                         onChange={(e) => updateField(i, "field_type", e.target.value)}
                         className="w-full border border-slate-300 bg-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
                       >
-                        {FIELD_TYPES.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
+                        {FIELD_TYPES.map((type) => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
                           </option>
                         ))}
                       </select>
                     </div>
                   </div>
 
-                  <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer pt-1">
+                  <label className="flex items-center gap-2 text-xs text-slate-600 pt-1">
                     <input
                       type="checkbox"
                       checked={field.is_required}
                       onChange={(e) => updateField(i, "is_required", e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                      className="h-3.5 w-3.5 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                     />
-                    Obligatorio
+                    <span>Obligatorio</span>
                   </label>
 
                   {CHOICE_TYPES.includes(field.field_type) && (
-                    <div className="mt-3 pt-3 border-t border-slate-200/60 space-y-2">
-                      <p className="text-xs font-medium text-slate-600">
-                        Opciones (mínimo 2):
-                      </p>
+                    <div className="pt-2 space-y-2">
+                      <label className="block text-xs font-medium text-slate-500">
+                        Opciones
+                      </label>
                       {field.choices.map((choice, ci) => (
-                        <div key={choice.id ?? `new-${ci}`} className="flex items-center gap-2">
+                        <div key={choice.id ?? `choice-${ci}`} className="flex items-center gap-2">
                           <input
+                            placeholder={`Opción ${ci + 1}`}
                             value={choice.text}
                             onChange={(e) => updateChoice(i, ci, e.target.value)}
-                            placeholder={`Opción ${ci + 1}`}
-                            className="flex-1 min-w-0 border border-slate-300 bg-white rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                            className="flex-1 border border-slate-300 bg-white rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
                           />
                           <button
                             type="button"
                             onClick={() => removeChoice(i, ci)}
-                            className="shrink-0 text-rose-600 text-xs font-medium hover:text-rose-700 hover:underline px-2 py-1"
+                            className="text-slate-400 hover:text-rose-600 text-xs px-2"
                           >
-                            Quitar
+                            ✕
                           </button>
                         </div>
                       ))}
                       <button
                         type="button"
                         onClick={() => addChoice(i)}
-                        className="text-sky-600 text-xs sm:text-sm font-medium hover:underline inline-block pt-1"
+                        className="text-xs text-sky-600 font-medium hover:underline pt-1 block"
                       >
                         + Agregar opción
                       </button>
@@ -313,9 +331,9 @@ export default function FormBuilder() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full bg-teal-600 text-white font-semibold py-2.5 sm:py-3 rounded-lg hover:bg-teal-700 active:bg-teal-800 disabled:opacity-60 transition-colors shadow-sm text-sm sm:text-base mt-4"
+              className="w-full bg-sky-600 text-white font-medium py-2.5 rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50 shadow-sm"
             >
-              {saving ? "Guardando..." : isEditMode ? "Guardar cambios" : "Guardar formulario"}
+              {saving ? "Guardando..." : "Guardar Formulario"}
             </button>
           </form>
         </div>

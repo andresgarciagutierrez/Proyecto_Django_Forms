@@ -47,18 +47,10 @@ const DOCUMENT_TYPES = [
   { value: "RC", label: "Registro civil" },
 ];
 
-// ===============================
-// EXPRESIONES REGULARES
-// ===============================
-
 const NAME_REGEX = /^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$/;
 const DOCUMENT_REGEX = /^\d{6,12}$/;
 const NUMBER_REGEX = /^-?\d+(\.\d+)?$/;
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-
-// ===============================
-// FECHA
-// ===============================
 
 const validateDate = (value: string) => {
   if (!DATE_REGEX.test(value)) return false;
@@ -73,8 +65,36 @@ const validateDate = (value: string) => {
   );
 };
 
+// DRF devuelve errores en formas distintas (string, lista de strings,
+// o lista de objetos anidados en validaciones de "answers"); esta
+// función recorre cualquier forma y junta solo los mensajes de texto.
+function extractErrorMessage(error: any): string {
+  const data = error?.response?.data;
+
+  if (!data) return "No se pudo enviar la respuesta. Intenta de nuevo.";
+  if (typeof data === "string") return data;
+  if (typeof data.detail === "string") return data.detail;
+
+  const messages: string[] = [];
+
+  const collect = (value: unknown) => {
+    if (Array.isArray(value)) {
+      value.forEach(collect);
+    } else if (value && typeof value === "object") {
+      Object.values(value).forEach(collect);
+    } else if (value) {
+      messages.push(String(value));
+    }
+  };
+
+  collect(data);
+
+  return messages.length ? messages.join(" ") : "No se pudo enviar la respuesta.";
+}
+
 export default function FormResponderScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string | string[] }>();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [form, setForm] = useState<FormData | null>(null);
   const [answers, setAnswers] = useState<Answers>({});
@@ -85,10 +105,6 @@ export default function FormResponderScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  // ===============================
-  // CARGAR FORMULARIO
-  // ===============================
 
   useEffect(() => {
     let mounted = true;
@@ -118,9 +134,6 @@ export default function FormResponderScreen() {
       } catch (err: any) {
         if (!mounted) return;
 
-        // console.warn en vez de console.error: el error ya se maneja
-        // y se comunica al usuario vía setError(); no debe disparar el
-        // overlay de pantalla completa de LogBox.
         console.warn("[FORM] Error cargando formulario:", err);
 
         const status = err?.response?.status;
@@ -146,10 +159,6 @@ export default function FormResponderScreen() {
     };
   }, [id]);
 
-  // ===============================
-  // RESPUESTAS
-  // ===============================
-
   const setAnswer = (fieldId: number, value: AnswerValue) => {
     setAnswers((previous) => ({ ...previous, [fieldId]: value }));
   };
@@ -165,10 +174,6 @@ export default function FormResponderScreen() {
 
     setAnswer(fieldId, updated);
   };
-
-  // ===============================
-  // VALIDACIÓN
-  // ===============================
 
   const hasValue = (value: AnswerValue) => {
     if (Array.isArray(value)) return value.length > 0;
@@ -220,10 +225,6 @@ export default function FormResponderScreen() {
     return null;
   };
 
-  // ===============================
-  // PAYLOAD
-  // ===============================
-
   const buildAnswersPayload = () => {
     if (!form) return [];
 
@@ -251,10 +252,6 @@ export default function FormResponderScreen() {
         }
       });
   };
-
-  // ===============================
-  // ENVIAR
-  // ===============================
 
   const handleSubmit = async () => {
     if (submitting || !form) return;
@@ -292,35 +289,12 @@ export default function FormResponderScreen() {
         router.replace("/forms");
       }, 1200);
     } catch (err: any) {
-      // console.warn en vez de console.error: incluye casos esperados de
-      // validación de negocio (p. ej. "documento ya respondió este
-      // formulario"), que no deben disparar el overlay de LogBox.
       console.warn("[FORM] Error enviando respuesta:", err);
-
-      const data = err?.response?.data;
-      let message = "No se pudo enviar la respuesta.";
-
-      if (typeof data?.detail === "string") {
-        message = data.detail;
-      } else if (Array.isArray(data?.form)) {
-        message = data.form.join(" ");
-      } else if (Array.isArray(data?.answers)) {
-        message = data.answers.join(" ");
-      } else if (typeof data?.answers === "string") {
-        message = data.answers;
-      } else if (typeof data?.form === "string") {
-        message = data.form;
-      }
-
-      setError(message);
+      setError(extractErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
   };
-
-  // ===============================
-  // LOADING
-  // ===============================
 
   if (loading) {
     return (
@@ -332,10 +306,6 @@ export default function FormResponderScreen() {
       </View>
     );
   }
-
-  // ===============================
-  // SIN FORMULARIO
-  // ===============================
 
   if (!form) {
     return (
@@ -362,10 +332,6 @@ export default function FormResponderScreen() {
       </View>
     );
   }
-
-  // ===============================
-  // RENDER
-  // ===============================
 
   return (
     <ScrollView
@@ -400,8 +366,6 @@ export default function FormResponderScreen() {
             <Text className="health-success-text text-sm">{success}</Text>
           </View>
         )}
-
-        {/* DATOS DEL RESPONDENTE */}
 
         <View className="health-surface-muted health-border border rounded-xl p-4 mb-6">
           <Text className="text-base font-semibold health-text mb-4">
@@ -480,8 +444,6 @@ export default function FormResponderScreen() {
             className="health-input"
           />
         </View>
-
-        {/* CAMPOS */}
 
         {form.fields.map((field, index) => {
           const value = answers[field.id];
@@ -617,8 +579,6 @@ export default function FormResponderScreen() {
             </View>
           );
         })}
-
-        {/* ENVIAR */}
 
         <TouchableOpacity
           onPress={handleSubmit}

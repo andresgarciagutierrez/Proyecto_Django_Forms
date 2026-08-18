@@ -12,6 +12,21 @@ const DOCUMENT_TYPE_LABELS = {
   RC: "Registro civil",
 };
 
+// answer.number_value puede ser 0, que es un valor válido pero "falsy"
+// en JS. Encadenar con "||" (como antes) hacía que un 0 se saltara a
+// null y se mostrara "Sin respuesta" pese a que sí había una respuesta.
+function getDisplayValue(answer) {
+  if (answer.text_value) return answer.text_value;
+  if (answer.number_value !== null && answer.number_value !== undefined) {
+    return answer.number_value;
+  }
+  if (answer.date_value) return answer.date_value;
+  if (answer.selected_choices?.length > 0) {
+    return answer.selected_choices.join(", ");
+  }
+  return null;
+}
+
 export default function ResponsesView() {
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -114,13 +129,7 @@ export default function ResponsesView() {
 
                   <div className="space-y-3">
                     {response.answers.map((answer, i) => {
-                      const displayValue =
-                        answer.text_value ||
-                        answer.number_value ||
-                        answer.date_value ||
-                        (answer.selected_choices?.length > 0
-                          ? answer.selected_choices.join(", ")
-                          : null);
+                      const displayValue = getDisplayValue(answer);
 
                       return (
                         <div
@@ -131,7 +140,7 @@ export default function ResponsesView() {
                             {answer.field_label || `Campo #${answer.field}`}
                           </span>
                           <p className="text-slate-800 font-medium break-words">
-                            {displayValue !== null && displayValue !== undefined ? (
+                            {displayValue !== null ? (
                               displayValue
                             ) : (
                               <span className="text-slate-400 italic">Sin respuesta</span>

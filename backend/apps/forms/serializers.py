@@ -15,15 +15,12 @@ from .models import (
 
 
 class FieldChoiceSerializer(serializers.ModelSerializer):
-
-    # order es opcional: si no se envía, se autoasigna por
-    # posición dentro de la lista (ver FormSerializer).
+    id = serializers.IntegerField(required=False)
     order = serializers.IntegerField(required=False, default=None)
 
     class Meta:
         model = FieldChoice
         fields = ["id", "text", "order"]
-        read_only_fields = ["id"]
 
     def validate_text(self, value):
         value = value.strip()
@@ -40,7 +37,6 @@ class FieldChoiceSerializer(serializers.ModelSerializer):
 
 
 class FormFieldSerializer(serializers.ModelSerializer):
-
     id = serializers.IntegerField(required=False)
     order = serializers.IntegerField(required=False, default=None)
     choices = FieldChoiceSerializer(many=True, required=False)
@@ -63,8 +59,7 @@ class FormFieldSerializer(serializers.ModelSerializer):
             if len(valid_choices) < 2:
                 raise serializers.ValidationError(
                     {
-                        "choices": "Los campos de selección requieren al menos "
-                        "2 opciones con texto."
+                        "choices": "Los campos de selección requieren al menos 2 opciones con texto."
                     }
                 )
         elif choices:
@@ -81,7 +76,6 @@ class FormFieldSerializer(serializers.ModelSerializer):
 
 
 class FormSerializer(serializers.ModelSerializer):
-
     fields = FormFieldSerializer(many=True, required=False)
     created_by = serializers.ReadOnlyField(source="created_by.username")
 
@@ -105,15 +99,6 @@ class FormSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("El título no puede estar vacío.")
         return value
 
-    # ---------------------------------------------------------
-    # Helpers reutilizables (evitan duplicar la creación de
-    # FormField + FieldChoice en create() y update()).
-    #
-    # Si "order" no viene en el payload, se autoasigna según
-    # la posición en la lista, evitando que varios registros
-    # colisionen en el valor por defecto (0) del modelo.
-    # ---------------------------------------------------------
-
     @staticmethod
     def _create_choices(field, choices_data):
         for index, choice_data in enumerate(choices_data):
@@ -135,13 +120,47 @@ class FormSerializer(serializers.ModelSerializer):
     @transaction.atomic
     def create(self, validated_data):
         fields_data = validated_data.pop("fields", [])
-
-        # "created_by" ya viene en validated_data: la vista lo
-        # inyecta con serializer.save(created_by=request.user).
         form = Form.objects.create(**validated_data)
         self._create_fields(form, fields_data)
-
         return form
+
+    def _update_existing_field(self, field, field_data, choices_data):
+        new_field_type = field_data.get("field_type", field.field_type)
+
+        if new_field_type != field.field_type and field.answers.exists():
+            raise serializers.ValidationError(
+                {
+                    "fields": f"El campo '{field.label}' ya tiene respuestas y no puede cambiar de tipo."
+                }
+            )
+
+        for attr, value in field_data.items():
+            setattr(field, attr, value)
+        field.save()
+
+        if choices_data is not None:
+            existing_choices = {c.id: c for c in field.choices.all()}
+            received_choice_ids = set()
+
+            for idx, choice_data in enumerate(choices_data):
+                c_id = choice_data.pop("id", None)
+                if choice_data.get("order") is None:
+                    choice_data["order"] = idx
+
+                if c_id and c_id in existing_choices:
+                    choice = existing_choices[c_id]
+                    for c_attr, c_val in choice_data.items():
+                        setattr(choice, c_attr, c_val)
+                    choice.save()
+                    received_choice_ids.add(c_id)
+                else:
+                    new_c = FieldChoice.objects.create(field=field, **choice_data)
+                    received_choice_ids.add(new_c.id)
+
+            choices_to_remove = set(existing_choices.keys()) - received_choice_ids
+            for c_id in choices_to_remove:
+                choice = existing_choices[c_id]
+                choice.delete()
 
     @transaction.atomic
     def update(self, instance, validated_data):
@@ -172,46 +191,19 @@ class FormSerializer(serializers.ModelSerializer):
                 self._create_choices(field, choices_data or [])
                 received_ids.add(field.id)
 
-        # Eliminar campos que ya no fueron enviados, salvo que
-        # tengan respuestas asociadas (se preservan por integridad).
         fields_to_remove = set(existing_fields) - received_ids
         for field_id in fields_to_remove:
             field = existing_fields[field_id]
             if not field.answers.exists():
                 field.delete()
-
-        return instance
-
-    def _update_existing_field(self, field, field_data, choices_data):
-        new_field_type = field_data.get("field_type", field.field_type)
-
-        if new_field_type != field.field_type and field.answers.exists():
-            raise serializers.ValidationError(
-                {
-                    "fields": f"El campo '{field.label}' ya tiene respuestas "
-                    "y no puede cambiar de tipo."
-                }
-            )
-
-        if choices_data is not None and field.answers.exists():
-            current_choice_ids = set(field.choices.values_list("id", flat=True))
-            received_choice_ids = {c.get("id") for c in choices_data if c.get("id")}
-
-            if current_choice_ids != received_choice_ids:
+            else:
                 raise serializers.ValidationError(
                     {
-                        "fields": f"El campo '{field.label}' ya tiene respuestas "
-                        "y no se pueden eliminar o reemplazar sus opciones."
+                        "fields": f"No se puede eliminar el campo '{field.label}' porque ya tiene respuestas asociadas."
                     }
                 )
 
-        for attr, value in field_data.items():
-            setattr(field, attr, value)
-        field.save()
-
-        if choices_data is not None:
-            field.choices.all().delete()
-            self._create_choices(field, choices_data)
+        return instance
 
 
 # =========================================================
@@ -220,10 +212,6 @@ class FormSerializer(serializers.ModelSerializer):
 
 
 class FormAnswerSerializer(serializers.ModelSerializer):
-
-    # Mapea cada tipo de campo simple al atributo de valor que le
-    # corresponde. Los tipos de selección se manejan aparte porque
-    # usan "selected_choices" en vez de un único valor escalar.
     VALUE_FIELD_BY_TYPE = {
         FormField.FieldType.TEXT: "text_value",
         FormField.FieldType.NUMBER: "number_value",
@@ -275,11 +263,10 @@ class FormAnswerSerializer(serializers.ModelSerializer):
                 {expected_key: f"El campo '{field.label}' requiere un valor."}
             )
 
-        # Ningún otro tipo de valor debe venir informado a la vez.
         for key, value in values_by_key.items():
             if key != expected_key and value not in (None, "", []):
                 raise serializers.ValidationError(
-                    f"El campo '{field.label}' solo puede contener un tipo " "de valor."
+                    f"El campo '{field.label}' solo puede contener un tipo de valor."
                 )
 
         if (
@@ -288,8 +275,7 @@ class FormAnswerSerializer(serializers.ModelSerializer):
         ):
             raise serializers.ValidationError(
                 {
-                    "selected_choices": f"El campo '{field.label}' solo permite "
-                    "una opción."
+                    "selected_choices": f"El campo '{field.label}' solo permite una opción."
                 }
             )
 
@@ -297,8 +283,7 @@ class FormAnswerSerializer(serializers.ModelSerializer):
             if choice.field_id != field.id:
                 raise serializers.ValidationError(
                     {
-                        "selected_choices": "Una opción seleccionada no "
-                        "pertenece a este campo."
+                        "selected_choices": "Una opción seleccionada no pertenece a este campo."
                     }
                 )
 
@@ -306,12 +291,11 @@ class FormAnswerSerializer(serializers.ModelSerializer):
 
 
 # =========================================================
-# DETALLE DE RESPUESTA
+# DETALLE DE RESPUESTAS
 # =========================================================
 
 
 class FormAnswerDetailSerializer(serializers.ModelSerializer):
-
     field_label = serializers.CharField(source="field.label", read_only=True)
     field_type = serializers.CharField(source="field.field_type", read_only=True)
     selected_choices = serializers.SerializerMethodField()
@@ -334,15 +318,6 @@ class FormAnswerDetailSerializer(serializers.ModelSerializer):
 
 
 class FormResponseDetailSerializer(serializers.ModelSerializer):
-    """
-    Serializer de solo lectura para consultar respuestas.
-
-    El ViewSet asociado (FormResponseViewSet) no habilita
-    PUT/PATCH, así que este serializer nunca se usa para
-    escritura; se deja explícito para que quede claro incluso
-    si en el futuro se reactiva la edición.
-    """
-
     form_title = serializers.CharField(source="form.title", read_only=True)
     respondent = serializers.ReadOnlyField(source="respondent.username", default=None)
     answers = FormAnswerDetailSerializer(many=True, read_only=True)
@@ -364,12 +339,11 @@ class FormResponseDetailSerializer(serializers.ModelSerializer):
 
 
 # =========================================================
-# CREAR RESPUESTA
+# CREACIÓN DE RESPUESTAS
 # =========================================================
 
 
 class FormResponseSerializer(serializers.ModelSerializer):
-
     answers = FormAnswerSerializer(many=True, required=True)
     respondent = serializers.ReadOnlyField(source="respondent.username", default=None)
 
@@ -405,8 +379,7 @@ class FormResponseSerializer(serializers.ModelSerializer):
             if field and field.form_id != form.id:
                 raise serializers.ValidationError(
                     {
-                        "answers": "Una respuesta contiene un campo que no "
-                        "pertenece al formulario."
+                        "answers": "Una respuesta contiene un campo que no pertenece al formulario."
                     }
                 )
             if field:
@@ -442,15 +415,6 @@ class FormResponseSerializer(serializers.ModelSerializer):
         form = validated_data["form"]
         document_number = validated_data.get("document_number")
 
-        # Regla de negocio:
-        # - allow_multiple_responses=True  -> cualquiera responde varias veces.
-        # - allow_multiple_responses=False -> una respuesta por documento,
-        #   excepto para usuarios staff/superuser.
-        #
-        # El chequeo se hace aquí (dentro de la transacción, con lock sobre
-        # el Form) y no en validate(), para evitar que dos requests
-        # concurrentes pasen la validación al mismo tiempo y creen dos
-        # respuestas duplicadas.
         if (
             not form.allow_multiple_responses
             and document_number

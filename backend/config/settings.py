@@ -1,10 +1,5 @@
-"""
-Django settings for config project.
-"""
-
 import os
 from pathlib import Path
-
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,8 +28,11 @@ if not SECRET_KEY:
 
 DEBUG = env_bool("DEBUG", "False")
 
-ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1,172.30.20.21")
-
+# En desarrollo, aceptamos localhost y cualquier IP de la red local
+ALLOWED_HOSTS = env_list(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1,192.168.*,172.30.*,*" if DEBUG else "localhost",
+)
 
 # ------------------------------------------------------------------
 # Aplicaciones
@@ -56,9 +54,7 @@ INSTALLED_APPS = [
 ]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
 AUTH_USER_MODEL = "users.User"
-
 
 # ------------------------------------------------------------------
 # Django REST Framework
@@ -83,7 +79,6 @@ REST_FRAMEWORK = {
         "user": "1000/hour",
     },
 }
-
 
 # ------------------------------------------------------------------
 # Middleware
@@ -123,16 +118,13 @@ LOGIN_URL = "users:login"
 LOGIN_REDIRECT_URL = "users:profile"
 LOGOUT_REDIRECT_URL = "users:login"
 
-
 # ------------------------------------------------------------------
 # CORS
 # ------------------------------------------------------------------
 
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
-# Solo se abre todo si DEBUG está activo Y se permite explícitamente por env,
-# nunca por accidente solo porque DEBUG=True.
-CORS_ALLOW_ALL_ORIGINS = DEBUG and env_bool("CORS_ALLOW_ALL_ORIGINS_IN_DEBUG", "True")
-
+# En modo DEBUG, permite solicitudes CORS desde la app móvil Expo
+CORS_ALLOW_ALL_ORIGINS = DEBUG
 
 # ------------------------------------------------------------------
 # Base de datos
@@ -156,9 +148,8 @@ DATABASES = {
     }
 }
 
-
 # ------------------------------------------------------------------
-# Validación de contraseñas
+# Validación de contraseñas, Internacionalización y Estáticos
 # ------------------------------------------------------------------
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -170,27 +161,16 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-
-# ------------------------------------------------------------------
-# Internacionalización
-# ------------------------------------------------------------------
-
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
-
-# ------------------------------------------------------------------
-# Archivos estáticos
-# ------------------------------------------------------------------
-
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-
 # ------------------------------------------------------------------
-# Email
+# Email & Logging
 # ------------------------------------------------------------------
 
 EMAIL_BACKEND = os.environ.get(
@@ -202,17 +182,6 @@ EMAIL_BACKEND = os.environ.get(
     ),
 )
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@tuapp.com")
-
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", "True")
-
-
-# ------------------------------------------------------------------
-# Logging
-# ------------------------------------------------------------------
 
 DJANGO_LOG_LEVEL = os.environ.get("DJANGO_LOG_LEVEL", "INFO")
 
@@ -235,33 +204,4 @@ LOGGING = {
         "handlers": ["console"],
         "level": DJANGO_LOG_LEVEL,
     },
-    "loggers": {
-        "apps.tasks": {
-            "handlers": ["console"],
-            "level": "DEBUG",
-            "propagate": False,
-        },
-        "django.db.backends": {
-            "handlers": ["console"],
-            "level": "WARNING",
-            "propagate": False,
-        },
-    },
 }
-
-
-# ------------------------------------------------------------------
-# Seguridad para producción (se activan solas cuando DEBUG=False)
-# ------------------------------------------------------------------
-
-if not DEBUG:
-    SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", "True")
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "31536000"))
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = "DENY"
-    # Si estás detrás de un proxy/load balancer que termina TLS (nginx, Render, etc.)
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

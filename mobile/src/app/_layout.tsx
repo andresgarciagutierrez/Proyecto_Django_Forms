@@ -1,75 +1,42 @@
 import "../../global.css";
 
-import {
-  ReactNode,
-  useEffect,
-} from "react";
+import { ReactNode, useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { Stack, useRouter, useSegments } from "expo-router";
 
-import {
-  ActivityIndicator,
-  View,
-} from "react-native";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 
-import {
-  Stack,
-  useRouter,
-  useSegments,
-} from "expo-router";
+// Rutas públicas: "/" (en tránsito hacia /forms, segments === []),
+// /forms (listado), /forms/[id] (diligenciar). /forms/new y
+// /forms/[id]/edit requieren sesión.
+function isPublicRoute(segments: string[]): boolean {
+  if (segments.length === 0) return true;
 
-import {
-  AuthProvider,
-  useAuth,
-} from "../context/AuthContext";
+  const [first, second, third] = segments;
 
-// ==========================================================
-// RUTAS PÚBLICAS
-// ==========================================================
+  if (first === "login" || first === "register") return true;
+  if (first !== "forms") return false;
 
-function isPublicRoute(
-  segments: string[]
-): boolean {
-  const first = segments[0];
+  if (second === "new") return false;
+  if (third === "edit") return false;
 
-  return (
-    first === "login" ||
-    first === "forms"
-  );
+  return true;
 }
 
-// ==========================================================
-// GUARD DE AUTENTICACIÓN
-// ==========================================================
-
-function RouteGuard({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const {
-    token,
-    loading,
-  } = useAuth();
-
+function RouteGuard({ children }: { children: ReactNode }) {
+  const { token, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) {
-      return;
-    }
+    if (loading) return;
 
-    const publicRoute =
-      isPublicRoute(segments);
+    const publicRoute = isPublicRoute(segments);
 
     if (!token && !publicRoute) {
       router.replace("/login");
     }
-  }, [
-    token,
-    loading,
-    segments,
-    router,
-  ]);
+  }, [token, loading, segments, router]);
 
   if (loading) {
     return (
@@ -82,19 +49,11 @@ function RouteGuard({
   return <>{children}</>;
 }
 
-// ==========================================================
-// ROOT LAYOUT
-// ==========================================================
-
 export default function RootLayout() {
   return (
     <AuthProvider>
       <RouteGuard>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-          }}
-        />
+        <Stack screenOptions={{ headerShown: false }} />
       </RouteGuard>
     </AuthProvider>
   );

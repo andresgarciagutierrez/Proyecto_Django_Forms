@@ -2,7 +2,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
 from django.urls import path
 
-from .views import MeView, UserProfileView, UserRegisterView
+from .views import UserProfileView, UserRegisterView
 
 app_name = "users"
 
@@ -15,7 +15,10 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("register/", UserRegisterView.as_view(), name="register"),
     path("profile/", UserProfileView.as_view(), name="profile"),
-    path("me/", MeView.as_view(), name="me"),
+    # "me/" se quitó de aquí: ya está registrada en config/urls.py
+    # como "/api/me/" (name="api_me"), junto al resto de la API
+    # (forms/, responses/, token/). Tenerla también acá era una
+    # ruta duplicada apuntando a la misma vista sin ningún uso real.
     path(
         "password-change/",
         auth_views.PasswordChangeView.as_view(

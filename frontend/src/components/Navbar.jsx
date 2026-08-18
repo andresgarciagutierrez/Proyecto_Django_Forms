@@ -2,37 +2,44 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+const DESKTOP_LINK_CLASS =
+  "text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors";
+
+const MOBILE_LINK_CLASS =
+  "block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors";
+
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
-  const {
-    token,
-    username,
-    logout,
-    canManageForms,
-    canViewResponses,
-  } = useAuth();
+  const { token, username, logout, canManageForms, canViewResponses } =
+    useAuth();
 
   const navigate = useNavigate();
 
+  const closeMenu = () => setIsOpen(false);
+
   const handleLogout = () => {
     logout();
-    setIsOpen(false);
+    closeMenu();
     navigate("/login");
   };
 
-  const closeMenu = () => {
-    setIsOpen(false);
-  };
+  // Única fuente de verdad para qué links mostrar: antes esta misma
+  // condición (token && canManageForms / canViewResponses) estaba
+  // escrita dos veces, una para desktop y otra para mobile.
+  const navLinks = [
+    { to: "/forms", label: "Disponibles" },
+    ...(token && canManageForms ? [{ to: "/forms/new", label: "Nuevo" }] : []),
+    ...(token && canViewResponses
+      ? [{ to: "/responses", label: "Respuestas" }]
+      : []),
+  ];
 
   return (
     <nav className="sticky top-0 z-50 w-full bg-white border-b border-slate-200 shadow-sm">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="h-16 flex items-center justify-between">
-
-          {/* =========================
-              LOGO
-          ========================== */}
+          {/* LOGO */}
           <Link
             to="/forms"
             onClick={closeMenu}
@@ -42,50 +49,20 @@ export default function Navbar() {
             Formularios
           </Link>
 
-          {/* =========================
-              NAVEGACIÓN DESKTOP
-          ========================== */}
+          {/* NAVEGACIÓN DESKTOP */}
           <div className="hidden sm:flex items-center gap-6">
-
-            <Link
-              to="/forms"
-              className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              Disponibles
-            </Link>
-
-            {token && canManageForms && (
-              <Link
-                to="/forms/new"
-                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-              >
-                Nuevo
+            {navLinks.map(({ to, label }) => (
+              <Link key={to} to={to} className={DESKTOP_LINK_CLASS}>
+                {label}
               </Link>
-            )}
-
-            {token && canViewResponses && (
-              <Link
-                to="/responses"
-                className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-              >
-                Respuestas
-              </Link>
-            )}
+            ))}
           </div>
 
-          {/* =========================
-              USUARIO DESKTOP
-          ========================== */}
+          {/* USUARIO DESKTOP */}
           <div className="hidden sm:flex items-center gap-3">
-
             {token ? (
               <>
-                {username && (
-                  <span className="inline-flex items-center rounded-full border border-sky-100 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
-                    {username}
-                  </span>
-                )}
-
+                {username && <UserBadge username={username} />}
                 <button
                   type="button"
                   onClick={handleLogout}
@@ -95,18 +72,24 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <Link
-                to="/login"
-                className="text-sm font-semibold text-sky-600 hover:text-sky-700 transition-colors"
-              >
-                Iniciar sesión
-              </Link>
+              <>
+                <Link
+                  to="/register"
+                  className="text-sm font-medium text-sky-600 hover:text-sky-700 transition-colors"
+                >
+                  Registrarse
+                </Link>
+                <Link
+                  to="/login"
+                  className="text-sm font-semibold text-sky-600 hover:text-sky-700 transition-colors"
+                >
+                  Iniciar sesión
+                </Link>
+              </>
             )}
           </div>
 
-          {/* =========================
-              BOTÓN MOBILE
-          ========================== */}
+          {/* BOTÓN MOBILE */}
           <button
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}
@@ -114,85 +97,31 @@ export default function Navbar() {
             aria-label={isOpen ? "Cerrar menú" : "Abrir menú"}
             aria-expanded={isOpen}
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              {isOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              )}
-            </svg>
+            <MenuIcon open={isOpen} />
           </button>
         </div>
       </div>
 
-      {/* =========================
-          MENÚ MOBILE
-      ========================== */}
+      {/* MENÚ MOBILE */}
       {isOpen && (
         <div className="sm:hidden border-t border-slate-100 bg-white">
           <div className="w-full max-w-7xl mx-auto px-4 py-3 space-y-1">
-
-            {/* Disponibles */}
-            <Link
-              to="/forms"
-              onClick={closeMenu}
-              className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-            >
-              Disponibles
-            </Link>
-
-            {/* Nuevo */}
-            {token && canManageForms && (
+            {navLinks.map(({ to, label }) => (
               <Link
-                to="/forms/new"
+                key={to}
+                to={to}
                 onClick={closeMenu}
-                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                className={MOBILE_LINK_CLASS}
               >
-                Nuevo
+                {label}
               </Link>
-            )}
+            ))}
 
-            {/* Respuestas */}
-            {token && canViewResponses && (
-              <Link
-                to="/responses"
-                onClick={closeMenu}
-                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-              >
-                Respuestas
-              </Link>
-            )}
-
-            {/* =========================
-                USUARIO MOBILE
-            ========================== */}
+            {/* USUARIO MOBILE */}
             <div className="mt-3 border-t border-slate-100 pt-3">
-
               {token ? (
                 <div className="flex items-center justify-between gap-3 px-3">
-
-                  {username && (
-                    <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 border border-sky-100">
-                      {username}
-                    </span>
-                  )}
-
+                  {username && <UserBadge username={username} />}
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -202,19 +131,63 @@ export default function Navbar() {
                   </button>
                 </div>
               ) : (
-                <Link
-                  to="/login"
-                  onClick={closeMenu}
-                  className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-sky-600 hover:bg-sky-50 hover:text-sky-700 transition-colors"
-                >
-                  Iniciar sesión
-                </Link>
+                <div className="space-y-1">
+                  <Link
+                    to="/register"
+                    onClick={closeMenu}
+                    className="block rounded-lg px-3 py-2.5 text-sm font-medium text-sky-600 hover:bg-sky-50 hover:text-sky-700 transition-colors"
+                  >
+                    Registrarse
+                  </Link>
+                  <Link
+                    to="/login"
+                    onClick={closeMenu}
+                    className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-sky-600 hover:bg-sky-50 hover:text-sky-700 transition-colors"
+                  >
+                    Iniciar sesión
+                  </Link>
+                </div>
               )}
-
             </div>
           </div>
         </div>
       )}
     </nav>
+  );
+}
+
+function UserBadge({ username }) {
+  return (
+    <span className="inline-flex items-center rounded-full border border-sky-100 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+      {username}
+    </span>
+  );
+}
+
+function MenuIcon({ open }) {
+  return (
+    <svg
+      className="w-6 h-6"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      {open ? (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M6 18L18 6M6 6l12 12"
+        />
+      ) : (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2"
+          d="M4 6h16M4 12h16M4 18h16"
+        />
+      )}
+    </svg>
   );
 }
