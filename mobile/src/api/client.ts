@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-// Candidatas secundarias
+// Candidatas ordenadas por prioridad (Primero Ngrok / URL principal)
 const CANDIDATE_URLS = [
   process.env.EXPO_PUBLIC_API_URL,
   process.env.EXPO_PUBLIC_API_URL_OFICINA,
@@ -25,7 +25,7 @@ let isResolvingNetwork: Promise<string> | null = null;
 /**
  * Realiza un test rápido al endpoint público /ping/ para verificar conectividad.
  */
-async function testEndpoint(baseUrl: string, timeoutMs = 1500): Promise<boolean> {
+async function testEndpoint(baseUrl: string, timeoutMs = 2500): Promise<boolean> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -33,6 +33,10 @@ async function testEndpoint(baseUrl: string, timeoutMs = 1500): Promise<boolean>
     const normalized = normalizeBaseUrl(baseUrl);
     const response = await fetch(`${normalized}ping/`, {
       method: "GET",
+      headers: {
+        // Evita que Ngrok devuelva la página HTML de advertencia en cuentas free
+        "ngrok-skip-browser-warning": "true",
+      },
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -68,15 +72,7 @@ async function discoverWorkingBaseUrl(): Promise<string> {
 
   isResolvingNetwork = (async () => {
     try {
-      // 1. Intentar IP autodetectada por Expo
-      const autoMetroUrl = getAutoDetectedMetroUrl();
-      if (autoMetroUrl && (await testEndpoint(autoMetroUrl))) {
-        if (__DEV__) console.log("[DYNAMIC NETWORK] Detectado por Metro:", autoMetroUrl);
-        activeBaseUrl = autoMetroUrl;
-        return autoMetroUrl;
-      }
-
-      // 2. Probar candidatos estáticos del .env (Casa / Oficina)
+      // 1. Probar primero las URLs configuradas explícitamente en .env (Ngrok, Casa, Oficina)
       for (const candidate of CANDIDATE_URLS) {
         const normalized = normalizeBaseUrl(candidate);
         if (normalized && (await testEndpoint(normalized))) {
@@ -86,7 +82,15 @@ async function discoverWorkingBaseUrl(): Promise<string> {
         }
       }
 
-      // 3. Fallback por defecto si es Web o Localhost
+      // 2. Si las del .env fallan, probar IP autodetectada por Metro en la red local
+      const autoMetroUrl = getAutoDetectedMetroUrl();
+      if (autoMetroUrl && (await testEndpoint(autoMetroUrl))) {
+        if (__DEV__) console.log("[DYNAMIC NETWORK] Detectado por Metro:", autoMetroUrl);
+        activeBaseUrl = autoMetroUrl;
+        return autoMetroUrl;
+      }
+
+      // 3. Fallback por defecto si es Web o Emulador Android
       const fallback =
         Platform.OS === "web"
           ? `http://localhost:${process.env.EXPO_PUBLIC_API_PORT || "8000"}/api/`
@@ -110,6 +114,7 @@ const api = axios.create({
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true", // Omitir pantalla de aviso de Ngrok
   },
 });
 
