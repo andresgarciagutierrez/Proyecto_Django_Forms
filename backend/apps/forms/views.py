@@ -1,13 +1,14 @@
 from django.db.models import Q
 from rest_framework import viewsets
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
 from .models import Form, FormResponse
-
 from .permissions import (
     IsFormCreatorOrReadOnly,
     IsResponseOwnerOrStaff,
 )
-
 from .serializers import (
     FormResponseDetailSerializer,
     FormResponseSerializer,
@@ -90,3 +91,17 @@ class FormResponseViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         serializer.save(respondent=user if user.is_authenticated else None)
+
+
+# =========================================================
+# HEALTH CHECK
+# =========================================================
+
+
+@api_view(["GET", "HEAD"])
+@permission_classes([AllowAny])
+def health_check(request):
+    """
+    Endpoint público para pruebas de conectividad y ping desde el cliente.
+    """
+    return Response({"status": "ok"})

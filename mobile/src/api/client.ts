@@ -23,7 +23,7 @@ let activeBaseUrl: string | null = null;
 let isResolvingNetwork: Promise<string> | null = null;
 
 /**
- * Realiza un test rápido para verificar si el servidor responde en esa IP
+ * Realiza un test rápido al endpoint público /ping/ para verificar conectividad.
  */
 async function testEndpoint(baseUrl: string, timeoutMs = 1500): Promise<boolean> {
   const controller = new AbortController();
@@ -31,12 +31,12 @@ async function testEndpoint(baseUrl: string, timeoutMs = 1500): Promise<boolean>
 
   try {
     const normalized = normalizeBaseUrl(baseUrl);
-    const response = await fetch(`${normalized}`, {
-      method: "HEAD",
+    const response = await fetch(`${normalized}ping/`, {
+      method: "GET",
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
-    return response.ok || response.status === 401 || response.status === 404;
+    return response.ok;
   } catch {
     clearTimeout(timeoutId);
     return false;
@@ -44,7 +44,7 @@ async function testEndpoint(baseUrl: string, timeoutMs = 1500): Promise<boolean>
 }
 
 /**
- * Obtiene la IP actual asignada por el router a Windows leyéndola desde Expo Metro
+ * Obtiene la IP actual asignada por el router leyéndola desde Expo Metro
  */
 function getAutoDetectedMetroUrl(): string | null {
   if (Platform.OS === "web") return null;
@@ -67,32 +67,36 @@ async function discoverWorkingBaseUrl(): Promise<string> {
   if (isResolvingNetwork) return isResolvingNetwork;
 
   isResolvingNetwork = (async () => {
-    // 1. Intentar IP autodetectada por Expo (Funciona aunque cambie el cuadrante)
-    const autoMetroUrl = getAutoDetectedMetroUrl();
-    if (autoMetroUrl && (await testEndpoint(autoMetroUrl))) {
-      if (__DEV__) console.log("[DYNAMIC NETWORK] Detectado por Metro:", autoMetroUrl);
-      activeBaseUrl = autoMetroUrl;
-      return autoMetroUrl;
-    }
-
-    // 2. Probar candidatos estáticos del .env (Casa / Oficina)
-    for (const candidate of CANDIDATE_URLS) {
-      const normalized = normalizeBaseUrl(candidate);
-      if (normalized && (await testEndpoint(normalized))) {
-        if (__DEV__) console.log("[DYNAMIC NETWORK] Detectado por lista .env:", normalized);
-        activeBaseUrl = normalized;
-        return normalized;
+    try {
+      // 1. Intentar IP autodetectada por Expo
+      const autoMetroUrl = getAutoDetectedMetroUrl();
+      if (autoMetroUrl && (await testEndpoint(autoMetroUrl))) {
+        if (__DEV__) console.log("[DYNAMIC NETWORK] Detectado por Metro:", autoMetroUrl);
+        activeBaseUrl = autoMetroUrl;
+        return autoMetroUrl;
       }
+
+      // 2. Probar candidatos estáticos del .env (Casa / Oficina)
+      for (const candidate of CANDIDATE_URLS) {
+        const normalized = normalizeBaseUrl(candidate);
+        if (normalized && (await testEndpoint(normalized))) {
+          if (__DEV__) console.log("[DYNAMIC NETWORK] Detectado por lista .env:", normalized);
+          activeBaseUrl = normalized;
+          return normalized;
+        }
+      }
+
+      // 3. Fallback por defecto si es Web o Localhost
+      const fallback =
+        Platform.OS === "web"
+          ? `http://localhost:${process.env.EXPO_PUBLIC_API_PORT || "8000"}/api/`
+          : "http://10.0.2.2:8000/api/";
+
+      activeBaseUrl = fallback;
+      return fallback;
+    } finally {
+      isResolvingNetwork = null;
     }
-
-    // 3. Fallback por defecto si es Web o Localhost
-    const fallback =
-      Platform.OS === "web"
-        ? `http://localhost:${process.env.EXPO_PUBLIC_API_PORT || "8000"}/api/`
-        : "http://127.0.0.1:8000/api/";
-
-    activeBaseUrl = fallback;
-    return fallback;
   })();
 
   return isResolvingNetwork;
@@ -146,7 +150,6 @@ export function setOnNetworkError(handler: NetworkErrorHandler | null): void {
 api.interceptors.request.use(
   async (config) => {
     try {
-      // Inyectar URL base dinámica
       if (!config.baseURL) {
         config.baseURL = await discoverWorkingBaseUrl();
       }
@@ -184,7 +187,6 @@ api.interceptors.response.use(
 
   async (error) => {
     if (!error.response) {
-      // Si falla la red, forzamos re-detección de IP para la próxima petición
       activeBaseUrl = null;
       isResolvingNetwork = null;
 
