@@ -32,7 +32,7 @@ urlpatterns = [
     path("users/", include("apps.users.urls")),
     path("tasks/", include("apps.tasks.urls")),
     # API REST bajo /api/
-    path("api/ping/", health_check, name="api_ping"),  # <-- Endpoint público de salud
+    path("api/ping/", health_check, name="api_ping"),  # Endpoint público de salud
     path("api/", include("apps.forms.urls")),
     path("api/token/", obtain_auth_token, name="api_token"),
     path("api/me/", MeView.as_view(), name="api_me"),

@@ -98,7 +98,7 @@ class FormResponseViewSet(viewsets.ModelViewSet):
 # =========================================================
 
 
-@api_view(["GET", "HEAD"])
+@api_view(["GET", "HEAD", "OPTIONS"])
 @permission_classes([AllowAny])
 def health_check(request):
     """

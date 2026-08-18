@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -28,10 +29,16 @@ if not SECRET_KEY:
 
 DEBUG = env_bool("DEBUG", "False")
 
-# En desarrollo, aceptamos localhost y cualquier IP de la red local
+# En desarrollo, aceptamos localhost, ips locales y subdominios de ngrok
 ALLOWED_HOSTS = env_list(
     "ALLOWED_HOSTS",
-    "localhost,127.0.0.1,192.168.*,172.30.*,*" if DEBUG else "localhost",
+    "localhost,127.0.0.1,.ngrok-free.dev,*",
+)
+
+# Permitir orígenes confiables para protecciones CSRF (necesario para Ngrok)
+CSRF_TRUSTED_ORIGINS = env_list(
+    "CSRF_TRUSTED_ORIGINS",
+    "https://*.ngrok-free.dev,http://localhost:5173",
 )
 
 # ------------------------------------------------------------------
@@ -122,9 +129,18 @@ LOGOUT_REDIRECT_URL = "users:login"
 # CORS
 # ------------------------------------------------------------------
 
-CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
-# En modo DEBUG, permite solicitudes CORS desde la app móvil Expo
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOWED_ORIGINS = env_list(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:5173,http://localhost:8081",
+)
+
+# En modo DEBUG o si viene definido en .env, habilita CORS total (ej. para apps móviles como Expo)
+CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS_IN_DEBUG", str(DEBUG))
+
+# Permitir la cabecera personalizada requerida por Ngrok para evitar pantallas intermedias
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "ngrok-skip-browser-warning",
+]
 
 # ------------------------------------------------------------------
 # Base de datos
