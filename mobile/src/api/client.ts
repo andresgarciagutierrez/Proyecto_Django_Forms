@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-// Candidatas ordenadas por prioridad (Primero Ngrok / URL principal)
+// Candidatas ordenadas por prioridad
 const CANDIDATE_URLS = [
   process.env.EXPO_PUBLIC_API_URL,
   process.env.EXPO_PUBLIC_API_URL_OFICINA,
@@ -16,39 +16,40 @@ function normalizeBaseUrl(url: string | null | undefined): string | null {
   return normalized.endsWith("/") ? normalized : `${normalized}/`;
 }
 
-// ------------------------------------------------------------------
 // Estado de detección de red
-// ------------------------------------------------------------------
 let activeBaseUrl: string | null = null;
 let isResolvingNetwork: Promise<string> | null = null;
 
 /**
- * Realiza un test rápido al endpoint público /ping/ para verificar conectividad.
+ * Realiza un test rápido al endpoint público /ping/
  */
-async function testEndpoint(baseUrl: string, timeoutMs = 2500): Promise<boolean> {
+async function testEndpoint(baseUrl: string, timeoutMs = 2000): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const normalized = normalizeBaseUrl(baseUrl);
+    if (!normalized) throw new Error("URL inválida");
+
     const response = await fetch(`${normalized}ping/`, {
       method: "GET",
       headers: {
-        // Evita que Ngrok devuelva la página HTML de advertencia en cuentas free
         "ngrok-skip-browser-warning": "true",
       },
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
-    return response.ok;
-  } catch {
+
+    if (response.ok) return normalized;
+    throw new Error("Endpoint no respondió OK");
+  } catch (error) {
     clearTimeout(timeoutId);
-    return false;
+    throw error;
   }
 }
 
 /**
- * Obtiene la IP actual asignada por el router leyéndola desde Expo Metro
+ * Obtiene la IP actual asignada por el router leyendo desde Expo Metro
  */
 function getAutoDetectedMetroUrl(): string | null {
   if (Platform.OS === "web") return null;
@@ -64,7 +65,7 @@ function getAutoDetectedMetroUrl(): string | null {
 }
 
 /**
- * Detecta dinámicamente cuál de las direcciones de red está activa
+ * Detecta dinámicamente cuál dirección de red responde más rápido EN PARALELO
  */
 async function discoverWorkingBaseUrl(): Promise<string> {
   if (activeBaseUrl) return activeBaseUrl;
@@ -72,32 +73,38 @@ async function discoverWorkingBaseUrl(): Promise<string> {
 
   isResolvingNetwork = (async () => {
     try {
-      // 1. Probar primero las URLs configuradas explícitamente en .env (Ngrok, Casa, Oficina)
-      for (const candidate of CANDIDATE_URLS) {
-        const normalized = normalizeBaseUrl(candidate);
-        if (normalized && (await testEndpoint(normalized))) {
-          if (__DEV__) console.log("[DYNAMIC NETWORK] Detectado por lista .env:", normalized);
-          activeBaseUrl = normalized;
-          return normalized;
-        }
-      }
+      const candidates: string[] = [];
 
-      // 2. Si las del .env fallan, probar IP autodetectada por Metro en la red local
+      CANDIDATE_URLS.forEach((url) => {
+        const norm = normalizeBaseUrl(url);
+        if (norm) candidates.push(norm);
+      });
+
       const autoMetroUrl = getAutoDetectedMetroUrl();
-      if (autoMetroUrl && (await testEndpoint(autoMetroUrl))) {
-        if (__DEV__) console.log("[DYNAMIC NETWORK] Detectado por Metro:", autoMetroUrl);
-        activeBaseUrl = autoMetroUrl;
-        return autoMetroUrl;
-      }
+      if (autoMetroUrl) candidates.push(autoMetroUrl);
 
-      // 3. Fallback por defecto si es Web o Emulador Android
       const fallback =
         Platform.OS === "web"
           ? `http://localhost:${process.env.EXPO_PUBLIC_API_PORT || "8000"}/api/`
           : "http://10.0.2.2:8000/api/";
 
-      activeBaseUrl = fallback;
-      return fallback;
+      if (candidates.length === 0) {
+        activeBaseUrl = fallback;
+        return fallback;
+      }
+
+      try {
+        const fastestWorkingUrl = await Promise.any(
+          candidates.map((url) => testEndpoint(url))
+        );
+        if (__DEV__) console.log("[DYNAMIC NETWORK] Conectado a:", fastestWorkingUrl);
+        activeBaseUrl = fastestWorkingUrl;
+        return fastestWorkingUrl;
+      } catch {
+        if (__DEV__) console.warn("[DYNAMIC NETWORK] Fallback a red por defecto:", fallback);
+        activeBaseUrl = fallback;
+        return fallback;
+      }
     } finally {
       isResolvingNetwork = null;
     }
@@ -106,15 +113,13 @@ async function discoverWorkingBaseUrl(): Promise<string> {
   return isResolvingNetwork;
 }
 
-// ------------------------------------------------------------------
 // Instancia Axios e Interceptores
-// ------------------------------------------------------------------
 const api = axios.create({
   timeout: 10_000,
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
-    "ngrok-skip-browser-warning": "true", // Omitir pantalla de aviso de Ngrok
+    "ngrok-skip-browser-warning": "true",
   },
 });
 

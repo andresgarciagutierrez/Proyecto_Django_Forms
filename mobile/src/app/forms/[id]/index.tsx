@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   Text,
   TextInput,
@@ -8,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { createResponse, fetchForm } from "../../api/forms";
+import { createResponse, deleteForm, fetchForm } from "../../../api/forms";
 
 type Choice = { id: number; text: string };
 
@@ -65,13 +66,10 @@ const validateDate = (value: string) => {
   );
 };
 
-// DRF devuelve errores en formas distintas (string, lista de strings,
-// o lista de objetos anidados en validaciones de "answers"); esta
-// función recorre cualquier forma y junta solo los mensajes de texto.
 function extractErrorMessage(error: any): string {
   const data = error?.response?.data;
 
-  if (!data) return "No se pudo enviar la respuesta. Intenta de nuevo.";
+  if (!data) return "No se pudo procesar la solicitud. Intenta de nuevo.";
   if (typeof data === "string") return data;
   if (typeof data.detail === "string") return data.detail;
 
@@ -89,7 +87,7 @@ function extractErrorMessage(error: any): string {
 
   collect(data);
 
-  return messages.length ? messages.join(" ") : "No se pudo enviar la respuesta.";
+  return messages.length ? messages.join(" ") : "No se pudo procesar la solicitud.";
 }
 
 export default function FormResponderScreen() {
@@ -130,7 +128,7 @@ export default function FormResponderScreen() {
           return;
         }
 
-        setForm(data);
+        setForm(data as unknown as FormData);
       } catch (err: any) {
         if (!mounted) return;
 
@@ -232,24 +230,20 @@ export default function FormResponderScreen() {
       .filter((field) => hasValue(answers[field.id]))
       .map((field) => {
         const value = answers[field.id];
+        let formattedValue: string | number | boolean | string[] = "";
 
-        switch (field.field_type) {
-          case "text":
-            return { field: field.id, text_value: String(value).trim() };
-          case "number":
-            return { field: field.id, number_value: Number(value) };
-          case "date":
-            return { field: field.id, date_value: String(value) };
-          case "single_choice":
-            return { field: field.id, selected_choices: [Number(value)] };
-          case "multiple_choice":
-            return {
-              field: field.id,
-              selected_choices: Array.isArray(value) ? value.map(Number) : [],
-            };
-          default:
-            return { field: field.id };
+        if (field.field_type === "multiple_choice") {
+          formattedValue = Array.isArray(value) ? value.map(String) : [];
+        } else if (field.field_type === "number") {
+          formattedValue = Number(value);
+        } else {
+          formattedValue = String(value);
         }
+
+        return {
+          question_id: field.id,
+          value: formattedValue,
+        };
       });
   };
 
@@ -294,6 +288,36 @@ export default function FormResponderScreen() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleDelete = () => {
+    if (!form) return;
+
+    Alert.alert(
+      "Eliminar formulario",
+      `¿Estás seguro de que deseas eliminar el formulario "${form.title}"? Esta acción no se puede deshacer.`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setSubmitting(true);
+              await deleteForm(form.id);
+              Alert.alert("Éxito", "El formulario fue eliminado correctamente.", [
+                { text: "OK", onPress: () => router.replace("/forms") },
+              ]);
+            } catch (err: any) {
+              console.warn("[FORM] Error eliminando formulario:", err);
+              setError(extractErrorMessage(err));
+            } finally {
+              setSubmitting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -600,6 +624,17 @@ export default function FormResponderScreen() {
               Enviar respuesta
             </Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleDelete}
+          disabled={submitting}
+          activeOpacity={0.8}
+          className="bg-red-600 rounded-xl py-3 mt-3"
+        >
+          <Text className="text-white text-center font-semibold">
+            Eliminar formulario
+          </Text>
         </TouchableOpacity>
 
         <Text className="health-text-muted text-xs text-center mt-4">

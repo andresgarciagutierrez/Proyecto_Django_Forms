@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   RefreshControl,
   Text,
   TouchableOpacity,
@@ -85,8 +86,6 @@ export default function FormsListScreen() {
       const status = err?.response?.status;
 
       if (status === 401) {
-        // "/forms" es pública: un 401 anónimo no implica sesión
-        // expirada, solo si había token guardado.
         setError(
           token
             ? "La sesión ha expirado. Inicia sesión nuevamente."
@@ -165,39 +164,74 @@ export default function FormsListScreen() {
     });
   }, []);
 
+  const executeDelete = useCallback(async (formId: number) => {
+    console.log("[FORMS] Confirmación aceptada, iniciando petición para ID:", formId);
+    setDeletingId(formId);
+    setError("");
+
+    try {
+      await deleteForm(formId);
+      setForms((previous) => previous.filter((f) => f.id !== formId));
+      console.log("[FORMS] Formulario eliminado exitosamente.");
+    } catch (err: any) {
+      console.error("[FORMS] ERROR ELIMINANDO DETALLE:", {
+        status: err?.response?.status,
+        data: err?.response?.data,
+        message: err?.message,
+        url: err?.config?.url,
+      });
+
+      setError(
+        `Error al eliminar (${err?.response?.status || "Sin respuesta"}): ${
+          err?.response?.data?.detail ||
+          err?.response?.data?.error ||
+          "Verifica que tengas permisos suficientes."
+        }`
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }, []);
+
   const handleDelete = useCallback(
     (form: FormSummary) => {
-      if (!canManageThisForm(form)) return;
+      console.log("[FORMS] Intentando eliminar formulario ID:", form.id);
+      
+      const authorized = canManageThisForm(form);
+      console.log("[FORMS] ¿Usuario autorizado para borrar?", authorized);
 
-      Alert.alert(
-        "Eliminar formulario",
-        `¿Eliminar "${form.title}"? Esta acción no se puede deshacer y también eliminará las respuestas asociadas.`,
-        [
-          { text: "Cancelar", style: "cancel" },
-          {
-            text: "Eliminar",
-            style: "destructive",
-            onPress: async () => {
-              setDeletingId(form.id);
-              setError("");
+      if (!authorized) {
+        if (Platform.OS === "web") {
+          window.alert("No tienes permisos suficientes para eliminar este formulario.");
+        } else {
+          Alert.alert("Permiso Denegado", "No tienes permisos suficientes para eliminar este formulario.");
+        }
+        return;
+      }
 
-              try {
-                await deleteForm(form.id);
-                setForms((previous) => previous.filter((f) => f.id !== form.id));
-              } catch (err) {
-                console.error("[FORMS] ERROR ELIMINANDO:", err);
-                setError(
-                  "No se pudo eliminar el formulario. Verifica que tengas permisos suficientes."
-                );
-              } finally {
-                setDeletingId(null);
-              }
+      if (Platform.OS === "web") {
+        const confirmed = window.confirm(
+          `¿Eliminar "${form.title}"? Esta acción no se puede deshacer.`
+        );
+        if (confirmed) {
+          executeDelete(form.id);
+        }
+      } else {
+        Alert.alert(
+          "Eliminar formulario",
+          `¿Eliminar "${form.title}"? Esta acción no se puede deshacer.`,
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Eliminar",
+              style: "destructive",
+              onPress: () => executeDelete(form.id),
             },
-          },
-        ]
-      );
+          ]
+        );
+      }
     },
-    [canManageThisForm]
+    [canManageThisForm, executeDelete]
   );
 
   if (loading) {
@@ -431,10 +465,11 @@ export default function FormsListScreen() {
                         <TouchableOpacity
                           onPress={(e) => {
                             e.stopPropagation();
+                            console.log("[FORMS] Click detectado en botón Eliminar para ID:", item.id);
                             handleDelete(item);
                           }}
-                          disabled={deletingId === item.id}
                           activeOpacity={0.7}
+                          style={{ padding: 4 }}
                         >
                           <Text className="text-sm font-semibold text-rose-500">
                             {deletingId === item.id ? "Eliminando..." : "Eliminar"}

@@ -10,11 +10,27 @@ export type RegisterPayload = {
   password2: string;
 };
 
-export async function loginRequest(username: string, password: string) {
+export type AuthResponse = {
+  token: string;
+  username: string;
+};
+
+export type UserProfile = {
+  id: number;
+  username: string;
+  email: string;
+  telephone?: string;
+  date_of_birth?: string | null;
+};
+
+export async function loginRequest(
+  username: string,
+  password: string
+): Promise<AuthResponse> {
   requireText(username, "El usuario es obligatorio.");
   requirePresent(password, "La contraseña es obligatoria.");
 
-  const response = await api.post("token/", {
+  const response = await api.post<AuthResponse>("token/", {
     username: username.trim(),
     password,
   });
@@ -26,21 +42,16 @@ export async function loginRequest(username: string, password: string) {
   return response.data;
 }
 
-// GET /api/me/
-export async function fetchMe() {
-  const response = await api.get("me/");
+export async function fetchMe(): Promise<UserProfile> {
+  const response = await api.get<UserProfile>("me/");
   return response.data;
 }
 
-// El backend devuelve { token, username } para auto-login tras registrarse.
-export async function registerRequest({
-  username,
-  email,
-  telephone,
-  date_of_birth,
-  password1,
-  password2,
-}: RegisterPayload) {
+export async function registerRequest(
+  payload: RegisterPayload
+): Promise<AuthResponse> {
+  const { username, email, telephone, date_of_birth, password1, password2 } = payload;
+
   requireText(username, "El usuario es obligatorio.");
   requireText(email, "El email es obligatorio.");
   requirePresent(password1, "La contraseña es obligatoria.");
@@ -49,7 +60,7 @@ export async function registerRequest({
     throw new Error("Las contraseñas no coinciden.");
   }
 
-  const response = await api.post("register/", {
+  const response = await api.post<AuthResponse>("register/", {
     username: username.trim(),
     email: email.trim(),
     telephone: telephone || "",

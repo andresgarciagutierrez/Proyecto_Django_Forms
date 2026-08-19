@@ -1,65 +1,124 @@
 import api from "./client";
 import { requireText, requireId } from "./validators";
 
-// Acepta number (form.id) o string (params de Expo Router).
-type EntityId = number | string;
+export type EntityId = number | string;
 
-export async function fetchForms() {
-  const response = await api.get("forms/");
+export type QuestionType = "text" | "number" | "select" | "radio" | "checkbox";
+
+export type QuestionOption = {
+  id?: EntityId;
+  label: string;
+  value: string;
+};
+
+export type FormQuestion = {
+  id?: EntityId;
+  label: string;
+  question_type: QuestionType;
+  required?: boolean;
+  options?: QuestionOption[];
+};
+
+export type Form = {
+  id: number;
+  title: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+  questions?: FormQuestion[];
+  is_active?: boolean;
+};
+
+export type FormAnswer = {
+  question_id: EntityId;
+  value: string | number | boolean | string[];
+};
+
+export type FormResponse = {
+  id: number;
+  form: number;
+  user?: number;
+  answers: FormAnswer[];
+  created_at?: string;
+};
+
+export type CreateFormPayload = {
+  title: string;
+  description?: string;
+  questions?: FormQuestion[];
+  [key: string]: unknown;
+};
+
+export type CreateResponsePayload = {
+  form: EntityId;
+  answers: FormAnswer[];
+  [key: string]: unknown;
+};
+
+// ------------------------------------------------------------------
+// Peticiones HTTP - Formularios
+// ------------------------------------------------------------------
+
+export async function fetchForms(): Promise<Form[]> {
+  const response = await api.get<Form[]>("forms/");
   return response.data;
 }
 
-export async function fetchForm(formId: EntityId) {
+export async function fetchForm(formId: EntityId): Promise<Form> {
   requireId(formId, "El ID del formulario es obligatorio.");
-  const response = await api.get(`forms/${formId}/`);
+  const response = await api.get<Form>(`forms/${formId}/`);
   return response.data;
 }
 
-export async function createForm(payload: Record<string, any>) {
+export async function createForm(payload: CreateFormPayload): Promise<Form> {
   if (!payload || typeof payload !== "object") {
     throw new Error("Los datos del formulario son obligatorios.");
   }
   requireText(payload.title, "El título del formulario es obligatorio.");
-  const response = await api.post("forms/", payload);
+
+  const response = await api.post<Form>("forms/", payload);
   return response.data;
 }
 
-// PATCH: solo envía los campos que cambiaron.
 export async function updateForm(
   formId: EntityId,
-  payload: Record<string, any>
-) {
+  payload: Partial<CreateFormPayload>
+): Promise<Form> {
   requireId(formId, "El ID del formulario es obligatorio.");
   if (!payload || Object.keys(payload).length === 0) {
     throw new Error("No hay datos para actualizar.");
   }
-  const response = await api.patch(`forms/${formId}/`, payload);
+
+  const response = await api.patch<Form>(`forms/${formId}/`, payload);
   return response.data;
 }
 
-export async function deleteForm(formId: EntityId) {
+export async function deleteForm(formId: EntityId): Promise<void> {
   requireId(formId, "El ID del formulario es obligatorio.");
+  // Ejecuta la petición DELETE conservando la barra inclinada final exigida por Django DRF
   await api.delete(`forms/${formId}/`);
 }
 
-export async function fetchMyResponses() {
-  const response = await api.get("responses/");
+// ------------------------------------------------------------------
+// Peticiones HTTP - Respuestas
+// ------------------------------------------------------------------
+
+export async function fetchMyResponses(): Promise<FormResponse[]> {
+  const response = await api.get<FormResponse[]>("responses/");
   return response.data;
 }
 
-export async function fetchResponse(responseId: EntityId) {
+export async function fetchResponse(
+  responseId: EntityId
+): Promise<FormResponse> {
   requireId(responseId, "El ID de la respuesta es obligatorio.");
-  const response = await api.get(`responses/${responseId}/`);
+  const response = await api.get<FormResponse>(`responses/${responseId}/`);
   return response.data;
 }
 
-type ResponsePayload = {
-  form: EntityId;
-  answers: unknown[];
-  [key: string]: unknown;
-};
-
-export async function createResponse(payload: ResponsePayload) {
+export async function createResponse(
+  payload: CreateResponsePayload
+): Promise<FormResponse> {
   if (!payload || typeof payload !== "object") {
     throw new Error("Los datos de la respuesta son obligatorios.");
   }
@@ -67,11 +126,12 @@ export async function createResponse(payload: ResponsePayload) {
   if (!Array.isArray(payload.answers)) {
     throw new Error("Las respuestas deben enviarse como una lista.");
   }
-  const response = await api.post("responses/", payload);
+
+  const response = await api.post<FormResponse>("responses/", payload);
   return response.data;
 }
 
-export async function deleteResponse(responseId: EntityId) {
+export async function deleteResponse(responseId: EntityId): Promise<void> {
   requireId(responseId, "El ID de la respuesta es obligatorio.");
   await api.delete(`responses/${responseId}/`);
 }

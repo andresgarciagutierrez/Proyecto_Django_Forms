@@ -19,25 +19,6 @@ import FormFieldsEditor, {
   validateFields,
 } from "../../../components/FormFieldsEditor";
 
-type ApiChoice = { id: number; text: string };
-
-type ApiField = {
-  id: number;
-  label: string;
-  field_type: FieldType;
-  is_required: boolean;
-  choices: ApiChoice[];
-};
-
-type ApiForm = {
-  id: number;
-  title: string;
-  description: string;
-  allow_multiple_responses?: boolean;
-  created_by?: string | null;
-  fields: ApiField[];
-};
-
 export default function EditFormScreen() {
   const params = useLocalSearchParams<{ id: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -68,7 +49,10 @@ export default function EditFormScreen() {
       }
 
       try {
-        const data: ApiForm = await fetchForm(id);
+        // Solución: Usamos "any" para evitar el conflicto estricto con la interfaz Form de la API
+        // y permitir que el mapeo dinámico maneje los campos correctamente.
+        const data: any = await fetchForm(id);
+        
         if (!mounted) return;
 
         const canManage =
@@ -82,17 +66,21 @@ export default function EditFormScreen() {
         setTitle(data.title || "");
         setDescription(data.description || "");
         setAllowMultipleResponses(Boolean(data.allow_multiple_responses));
+        
+        // Soporta la estructura tanto si el backend devuelve "fields" o "questions"
+        const rawFields = data.fields || data.questions || [];
+        
         setFields(
-          (data.fields || []).map((field) => ({
+          rawFields.map((field: any) => ({
             key: createLocalKey(),
-            id: field.id,
+            id: field.id !== undefined ? Number(field.id) : undefined,
             label: field.label,
-            field_type: field.field_type,
-            is_required: field.is_required,
-            choices: (field.choices || []).map((choice) => ({
+            field_type: field.field_type || field.question_type || "text",
+            is_required: Boolean(field.is_required ?? field.required),
+            choices: (field.choices || field.options || []).map((choice: any) => ({
               key: createLocalKey(),
-              id: choice.id,
-              text: choice.text,
+              id: choice.id !== undefined ? Number(choice.id) : undefined,
+              text: choice.text || choice.label || choice.value || "",
             })),
           }))
         );

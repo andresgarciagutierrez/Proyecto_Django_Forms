@@ -3,6 +3,7 @@ from pathlib import Path
 from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
+# Cargar variables de entorno desde el archivo .env
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -18,7 +19,7 @@ def env_list(name, default=""):
 
 
 # ------------------------------------------------------------------
-# Seguridad básica
+# Seguridad Básica
 # ------------------------------------------------------------------
 
 SECRET_KEY = os.environ.get("SECRET_KEY")
@@ -29,48 +30,53 @@ if not SECRET_KEY:
 
 DEBUG = env_bool("DEBUG", "False")
 
-# En desarrollo, aceptamos localhost, ips locales y subdominios de ngrok
+# Hosts permitidos desde .env (localhost, Docker, IPs de red local y ngrok)
 ALLOWED_HOSTS = env_list(
     "ALLOWED_HOSTS",
     "localhost,127.0.0.1,.ngrok-free.dev,*",
 )
 
-# Permitir orígenes confiables para protecciones CSRF (necesario para Ngrok)
+# Orígenes confiables para CSRF (Se especifican orígenes e IPs explícitas sin asteriscos en IPs)
 CSRF_TRUSTED_ORIGINS = env_list(
     "CSRF_TRUSTED_ORIGINS",
-    "https://*.ngrok-free.dev,http://localhost:5173",
+    "https://*.ngrok-free.dev,http://localhost:5173,http://localhost:8081,http://127.0.0.1:5173,http://127.0.0.1:8081,http://172.30.20.21:5173,http://172.30.20.21:8081",
 )
 
 # ------------------------------------------------------------------
-# Aplicaciones
+# Aplicaciones Instaladas
 # ------------------------------------------------------------------
 
 INSTALLED_APPS = [
+    # Aplicaciones locales
     "apps.forms",
     "apps.users",
     "apps.tasks",
+    # Librerías de terceros
     "corsheaders",
+    "rest_framework",
+    "rest_framework.authtoken",
+    # Django core
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "rest_framework",
-    "rest_framework.authtoken",
 ]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "users.User"
 
 # ------------------------------------------------------------------
-# Django REST Framework
+# Django REST Framework (DRF)
 # ------------------------------------------------------------------
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        # Usamos TokenAuthentication como mecanismo principal para cliente móvil/SPA
         "rest_framework.authentication.TokenAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
+        # NOTA: Se remueve SessionAuthentication en API pura para evitar
+        # el bloqueo CSRF en peticiones DELETE/POST cuando se usa Token.
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -82,8 +88,8 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "100/hour",
-        "user": "1000/hour",
+        "anon": "2000/hour" if DEBUG else "100/hour",
+        "user": "10000/hour" if DEBUG else "1000/hour",
     },
 }
 
@@ -92,7 +98,7 @@ REST_FRAMEWORK = {
 # ------------------------------------------------------------------
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",  # Debe ir en primer lugar
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -126,24 +132,22 @@ LOGIN_REDIRECT_URL = "users:profile"
 LOGOUT_REDIRECT_URL = "users:login"
 
 # ------------------------------------------------------------------
-# CORS
+# CORS (Cross-Origin Resource Sharing)
 # ------------------------------------------------------------------
 
 CORS_ALLOWED_ORIGINS = env_list(
     "CORS_ALLOWED_ORIGINS",
-    "http://localhost:5173,http://localhost:8081",
+    "http://localhost:5173,http://localhost:8081,http://172.30.20.21:5173,http://172.30.20.21:8081",
 )
 
-# En modo DEBUG o si viene definido en .env, habilita CORS total (ej. para apps móviles como Expo)
 CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS_IN_DEBUG", str(DEBUG))
 
-# Permitir la cabecera personalizada requerida por Ngrok para evitar pantallas intermedias
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "ngrok-skip-browser-warning",
 ]
 
 # ------------------------------------------------------------------
-# Base de datos
+# Base de Datos (PostgreSQL)
 # ------------------------------------------------------------------
 
 _required_db_vars = ["POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD"]
@@ -159,13 +163,13 @@ DATABASES = {
         "NAME": os.environ.get("POSTGRES_DB"),
         "USER": os.environ.get("POSTGRES_USER"),
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
-        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
+        "HOST": os.environ.get("POSTGRES_HOST", "db"),
         "PORT": os.environ.get("POSTGRES_PORT", "5432"),
     }
 }
 
 # ------------------------------------------------------------------
-# Validación de contraseñas, Internacionalización y Estáticos
+# Validación de Contraseñas e Internacionalización
 # ------------------------------------------------------------------
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -177,8 +181,8 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+LANGUAGE_CODE = "es-co"
+TIME_ZONE = "America/Bogota"
 USE_I18N = True
 USE_TZ = True
 
@@ -197,6 +201,11 @@ EMAIL_BACKEND = os.environ.get(
         else "django.core.mail.backends.smtp.EmailBackend"
     ),
 )
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", "True")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@tuapp.com")
 
 DJANGO_LOG_LEVEL = os.environ.get("DJANGO_LOG_LEVEL", "INFO")
